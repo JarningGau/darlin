@@ -1,6 +1,10 @@
 from __future__ import annotations
 
 import argparse
+import sys
+from pathlib import Path
+
+from darlin.bulk.validate import BulkInputError, require_pear_executable, require_readable_files
 
 
 def add_bulk_command(subparsers: argparse._SubParsersAction) -> None:
@@ -135,7 +139,26 @@ def _add_common_bulk_args(p: argparse.ArgumentParser, *, include_fqs: bool) -> N
 
 
 def _bulk_run(args: argparse.Namespace) -> int:
+    from darlin.bulk.paths import get_bulk_paths
     from darlin.bulk.pipeline import run_bulk_pipeline
+
+    paths = get_bulk_paths(args.output_dir, args.sample_id)
+    try:
+        if args.skip_pear:
+            require_readable_files(
+                [("Assembled FASTQ (default: <output-dir>/<sample-id>/pear/pear.assembled.fastq)", paths.assembled_fastq)]
+            )
+        else:
+            require_readable_files(
+                [
+                    ("Forward reads (--fq1)", args.fq1),
+                    ("Reverse reads (--fq2)", args.fq2),
+                ]
+            )
+            require_pear_executable(args.pear_path)
+    except BulkInputError as e:
+        print(e, file=sys.stderr)
+        return 1
 
     return run_bulk_pipeline(
         sample_id=args.sample_id,
@@ -166,6 +189,18 @@ def _bulk_pear(args: argparse.Namespace) -> int:
     from darlin.bulk.paths import get_bulk_paths
     from darlin.bulk.steps import step_pear
 
+    try:
+        require_readable_files(
+            [
+                ("Forward reads (--fq1)", args.fq1),
+                ("Reverse reads (--fq2)", args.fq2),
+            ]
+        )
+        require_pear_executable(args.pear_path)
+    except BulkInputError as e:
+        print(e, file=sys.stderr)
+        return 1
+
     paths = get_bulk_paths(args.output_dir, args.sample_id)
     logger = setup_logging(paths.log_file, getattr(logging, args.log_level.upper(), logging.INFO))
     step_pear(fq1=args.fq1, fq2=args.fq2, paths=paths, pear_path=args.pear_path, threads=args.threads, logger=logger)
@@ -181,16 +216,17 @@ def _bulk_extract(args: argparse.Namespace) -> int:
     from darlin.bulk.steps import step_extract
 
     paths = get_bulk_paths(args.output_dir, args.sample_id)
+    assembled = Path(args.assembled_fq) if args.assembled_fq else paths.assembled_fastq
+    try:
+        require_readable_files([("Assembled FASTQ (--assembled-fq or default pear output)", assembled)])
+    except BulkInputError as e:
+        print(e, file=sys.stderr)
+        print("Run `darlin bulk pear` first, or pass `--assembled-fq`.", file=sys.stderr)
+        return 1
+
     logger = setup_logging(paths.log_file, getattr(logging, args.log_level.upper(), logging.INFO))
 
     _unedited, p3_rc, p5_rc = resolve_bulk_primers(locus=args.locus)
-    from pathlib import Path
-
-    assembled = Path(args.assembled_fq) if args.assembled_fq else paths.assembled_fastq
-    if not assembled.exists():
-        raise FileNotFoundError(
-            f"Assembled FASTQ not found: {assembled}. Run `darlin bulk pear` first, or pass `--assembled-fq`."
-        )
 
     max_reads = args.sample_n if args.sample_n is not None else (2500 if args.test else None)
     step_extract(
@@ -207,15 +243,20 @@ def _bulk_extract(args: argparse.Namespace) -> int:
 
 def _bulk_filter(args: argparse.Namespace) -> int:
     import logging
-    from pathlib import Path
 
     from darlin.bulk.logging import setup_logging
     from darlin.bulk.paths import get_bulk_paths
     from darlin.bulk.steps import step_filter
 
     paths = get_bulk_paths(args.output_dir, args.sample_id)
-    logger = setup_logging(paths.log_file, getattr(logging, args.log_level.upper(), logging.INFO))
     extracted = Path(args.extracted) if args.extracted else paths.extracted_tsv
+    try:
+        require_readable_files([("Extracted TSV (--extracted or default)", extracted)])
+    except BulkInputError as e:
+        print(e, file=sys.stderr)
+        return 1
+
+    logger = setup_logging(paths.log_file, getattr(logging, args.log_level.upper(), logging.INFO))
     step_filter(
         extracted_tsv=extracted,
         min_bc_len=args.min_bc_len,
@@ -228,15 +269,20 @@ def _bulk_filter(args: argparse.Namespace) -> int:
 
 def _bulk_denoise(args: argparse.Namespace) -> int:
     import logging
-    from pathlib import Path
 
     from darlin.bulk.logging import setup_logging
     from darlin.bulk.paths import get_bulk_paths
     from darlin.bulk.steps import step_denoise
 
     paths = get_bulk_paths(args.output_dir, args.sample_id)
-    logger = setup_logging(paths.log_file, getattr(logging, args.log_level.upper(), logging.INFO))
     filtered = Path(args.filtered) if args.filtered else paths.filtered_tsv
+    try:
+        require_readable_files([("Filtered TSV (--filtered or default)", filtered)])
+    except BulkInputError as e:
+        print(e, file=sys.stderr)
+        return 1
+
+    logger = setup_logging(paths.log_file, getattr(logging, args.log_level.upper(), logging.INFO))
     step_denoise(
         filtered_tsv=filtered,
         reads_cutoff=args.reads_cutoff,
@@ -257,6 +303,12 @@ def _bulk_annotate(args: argparse.Namespace) -> int:
     from darlin.bulk.steps import step_annotate
 
     paths = get_bulk_paths(args.output_dir, args.sample_id)
+    try:
+        require_readable_files([("Denoised barcodes (--denoised-barcodes)", args.denoised_barcodes)])
+    except BulkInputError as e:
+        print(e, file=sys.stderr)
+        return 1
+
     logger = setup_logging(paths.log_file, getattr(logging, args.log_level.upper(), logging.INFO))
     step_annotate(
         denoised_barcodes_tsv=args.denoised_barcodes,
@@ -279,6 +331,17 @@ def _bulk_finalize(args: argparse.Namespace) -> int:
     from darlin.bulk.steps import step_finalize
 
     paths = get_bulk_paths(args.output_dir, args.sample_id)
+    try:
+        require_readable_files(
+            [
+                ("Denoised barcodes (--denoised-barcodes)", args.denoised_barcodes),
+                ("Annotated TSV (--annotated)", args.annotated),
+            ]
+        )
+    except BulkInputError as e:
+        print(e, file=sys.stderr)
+        return 1
+
     logger = setup_logging(paths.log_file, getattr(logging, args.log_level.upper(), logging.INFO))
     step_finalize(
         denoised_barcodes_tsv=args.denoised_barcodes,

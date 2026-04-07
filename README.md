@@ -1,6 +1,6 @@
 # DARLIN
 
-`DARLIN` is a computational framework for processing lineage tracing data from DARLIN mice, from raw sequencing reads to clone-level inference. The package provides a unified CLI interface for bulk DNA/RNA, single-cell (10xv3), and multi-modal (scCamellia) datasets.
+`DARLIN` is a computational framework for processing lineage-tracing data generated from DARLIN mice, from raw sequencing reads to clone-level inference. The project provides a unified command-line interface for bulk DNA/RNA, single-cell RNA-seq, and single-cell multi-modal assays.
 
 ## Installation
 
@@ -11,34 +11,48 @@ pixi install
 pixi run install-cli
 ```
 
-## Quick Start
+The workspace is defined in `pixi.toml` and currently targets Python 3.11 on `linux-64`.
 
 ## CLI Overview
 
 ```bash
 darlin --help
-Commands:
-  bulk        Recover lineage information from bulk DNA/RNA data
-  scrna       Recover lineage information from single-cell RNA-seq data
-  scmulti     Recover lineage information from single-cell multi-modal data
 ```
 
-### Bulk DNA/RNA
+Primary subcommands:
 
-`bulk` is step-oriented: most users run the full pipeline via `run`, while advanced users can execute individual steps.
+- `bulk`: recovery of lineage information from bulk DNA/RNA data
+- `scrna`: recovery of lineage information from single-cell RNA-seq data
+- `scmulti`: recovery of lineage information from single-cell multi-modal data
+
+## Quick Start
+
+For bulk datasets, the standard entrypoint is `darlin bulk run`, which executes the complete workflow:
+
+`pear -> extract -> filter -> denoise -> annotate -> finalize`
 
 ```bash
-# Full pipeline
-darlin bulk run --sample-id SAMPLE --fq1 R1.fastq.gz --fq2 R2.fastq.gz --locus Col1a1 --output-dir ./output
+darlin bulk run \
+  --sample-id L141_CA \
+  --fq1 tests/data/bulkdna/L141_CA_R1.fq.gz \
+  --fq2 tests/data/bulkdna/L141_CA_R2.fq.gz \
+  --output-dir ./output \
+  --threads 1
 
-# Step-by-step (example)
-darlin bulk pear --sample-id SAMPLE --fq1 R1.fastq.gz --fq2 R2.fastq.gz --output-dir ./output
-darlin bulk extract --sample-id SAMPLE --output-dir ./output
-darlin bulk filter --sample-id SAMPLE --output-dir ./output --reads-cutoff 1 --min-bc-len 20
-darlin bulk denoise --sample-id SAMPLE --output-dir ./output --umi-ld 1 --lb-hd-relative 0.01
+darlin bulk run \
+  --sample-id LL583_RA \
+  --fq1 tests/data/bulkrna/LL583_RA_1.fastq.gz \
+  --fq2 tests/data/bulkrna/LL583_RA_2.fastq.gz \
+  --locus Rosa \
+  --output-dir ./output \
+  --threads 1
 ```
 
-### Development checks
+This command writes sample-specific results under `./output/L141_CA/`.
+
+Detailed bulk documentation, including argument semantics, parameter interactions, output structure, and step-wise execution, is provided in [docs/bulk.md](docs/bulk.md).
+
+## Development Checks
 
 ```bash
 pixi run smoke
@@ -46,13 +60,6 @@ pixi run compile
 pixi run test
 ```
 
-## Pipeline Structure
-
-## Output
-
-## Project Structure
-
 ## Status
 
-This project is under active development. Interfaces and APIs may change.
-
+The project remains under active development. Command-line interfaces and internal APIs should be regarded as provisional.

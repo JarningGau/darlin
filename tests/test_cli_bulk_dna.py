@@ -65,3 +65,49 @@ def test_cli_bulk_dna_run_produces_outputs(tmp_path: Path) -> None:
         assert reader.fieldnames is not None
         assert "md5" in reader.fieldnames
         assert "UMIs" in reader.fieldnames
+
+
+def test_cli_bulk_run_missing_fq1_exits_cleanly(tmp_path: Path) -> None:
+    fq2 = Path("tests/data/bulkdna/L141_CA_R2.fq.gz")
+    assert fq2.exists()
+
+    r = _run(
+        "bulk",
+        "run",
+        "--sample-id",
+        "L141_CA",
+        "--fq1",
+        str(tmp_path / "nonexistent_R1.fq.gz"),
+        "--fq2",
+        str(fq2),
+        "--output-dir",
+        str(tmp_path / "out"),
+        "--threads",
+        "1",
+    )
+    assert r.returncode == 1, f"stdout:\n{r.stdout}\n\nstderr:\n{r.stderr}"
+    assert "Traceback" not in r.stderr
+    assert "Forward reads" in r.stderr or "--fq1" in r.stderr
+
+
+def test_cli_bulk_pear_missing_fq2_exits_cleanly(tmp_path: Path) -> None:
+    fq1 = Path("tests/data/bulkdna/L141_CA_R1.fq.gz")
+    assert fq1.exists()
+
+    r = _run(
+        "bulk",
+        "pear",
+        "--sample-id",
+        "L141_CA",
+        "--fq1",
+        str(fq1),
+        "--fq2",
+        str(tmp_path / "missing_R2.fq.gz"),
+        "--output-dir",
+        str(tmp_path / "out"),
+        "--threads",
+        "1",
+    )
+    assert r.returncode == 1, f"stdout:\n{r.stdout}\n\nstderr:\n{r.stderr}"
+    assert "Traceback" not in r.stderr
+    assert "Reverse reads" in r.stderr or "--fq2" in r.stderr
