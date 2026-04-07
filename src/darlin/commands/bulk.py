@@ -107,18 +107,23 @@ def _add_bulk_annotate(steps: argparse._SubParsersAction) -> None:
         "--denoised-barcodes",
         type=str,
         required=True,
-        help="Path to denoised_barcodes.tsv (typically produced by `darlin bulk denoise`)",
+        help="Path to denoised_barcodes.tsv from `darlin bulk denoise` (includes `query` column)",
     )
     p.add_argument("--log-level", type=str, default="INFO", choices=["DEBUG", "INFO", "WARNING", "ERROR"], help="Logging level")
     p.set_defaults(func=_bulk_annotate)
 
 
 def _add_bulk_finalize(steps: argparse._SubParsersAction) -> None:
-    p = steps.add_parser("finalize", help="Finalize outputs (CSV + diagnostics)")
+    p = steps.add_parser("finalize", help="Finalize outputs (alleles_by_umis.tsv)")
     _add_common_bulk_args(p, include_fqs=False)
     p.add_argument("--umi-ld", type=int, default=1, help="UMI clustering threshold (for output dir naming)")
     p.add_argument("--lb-hd-relative", type=float, default=0.01, help="Relative barcode HD threshold (for output dir naming)")
-    p.add_argument("--denoised-barcodes", type=str, required=True, help="Path to denoised_barcodes.tsv")
+    p.add_argument(
+        "--denoised-barcodes",
+        type=str,
+        required=True,
+        help="Path to denoised_barcodes.tsv (must include `query`, as from denoise or annotate)",
+    )
     p.add_argument("--annotated", type=str, required=True, help="Path to annotated.tsv")
     p.add_argument("--log-level", type=str, default="INFO", choices=["DEBUG", "INFO", "WARNING", "ERROR"], help="Logging level")
     p.set_defaults(func=_bulk_finalize)

@@ -6,7 +6,7 @@ set -euo pipefail
 # This script is intended for quick, manual verification:
 # - It runs `darlin.cli bulk run` on the bundled test FASTQs
 # - It checks that expected output files exist
-# - It verifies the alleles CSV header contains required columns
+# - It verifies the alleles TSV header contains required columns
 #
 # Usage:
 #   bash tests/test_cli_bulk_dna.sh
@@ -56,33 +56,33 @@ expect_file() {
 
 echo
 echo "==> Checking expected outputs exist"
-expect_file "${sample_dir}/${sample_id}.log"
+expect_file "${sample_dir}/run.log"
 expect_file "${sample_dir}/pear/pear.assembled.fastq"
 expect_file "${sample_dir}/extracted.tsv"
 expect_file "${sample_dir}/filtered.tsv"
 expect_file "${combo_dir}/denoised_barcodes.tsv"
 expect_file "${combo_dir}/annotated.tsv"
 
-alleles_csv="${combo_dir}/${sample_id}_alleles.csv"
-expect_file "${alleles_csv}"
+alleles_tsv="${combo_dir}/alleles_by_umis.tsv"
+expect_file "${alleles_tsv}"
 
-echo "==> Checking alleles CSV contains required headers"
-ALLELES_CSV="${alleles_csv}" python - <<'PY'
+echo "==> Checking alleles TSV contains required headers"
+ALLELES_TSV="${alleles_tsv}" python - <<'PY'
 import csv
 import os
 import sys
 
-alleles_csv = os.environ["ALLELES_CSV"]
-with open(alleles_csv, newline="") as f:
-    reader = csv.DictReader(f)
+alleles_tsv = os.environ["ALLELES_TSV"]
+with open(alleles_tsv, newline="") as f:
+    reader = csv.DictReader(f, delimiter="\t")
     if reader.fieldnames is None:
-        print("ERROR: CSV has no header row", file=sys.stderr)
+        print("ERROR: TSV has no header row", file=sys.stderr)
         sys.exit(1)
     for name in ("md5", "UMIs"):
         if name not in reader.fieldnames:
             print(f"ERROR: missing required column {name!r} in {reader.fieldnames!r}", file=sys.stderr)
             sys.exit(1)
-print("OK: CSV headers include 'md5' and 'UMIs'")
+print("OK: TSV headers include 'md5' and 'UMIs'")
 PY
 
 echo

@@ -139,9 +139,8 @@ def run_bulk_pipeline(
             )
 
             logger.info("#### Step: Finalize")
-            denoised_barcodes_with_query_tsv = combo_dir / "denoised_barcodes_with_query.tsv"
-            _alleles_csv = step_finalize(
-                denoised_barcodes_tsv=denoised_barcodes_with_query_tsv,
+            _alleles_tsv = step_finalize(
+                denoised_barcodes_tsv=denoised_barcodes_tsv,
                 annotated_tsv=annotated_tsv,
                 sample_id=sample_id,
                 paths=paths,

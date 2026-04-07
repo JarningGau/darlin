@@ -162,8 +162,11 @@ def step_denoise(
     out_agg = combo_dir / "denoised_agg.tsv"
     agg.to_csv(out_agg, sep="\t", index=False)
 
+    from Bio.Seq import Seq  # type: ignore
+
     agg2 = agg.groupby("lineage_bc_corr").size().reset_index(name="UMIs")
     agg2.sort_values(by="UMIs", ascending=False, inplace=True)
+    agg2["query"] = [str(Seq(s).reverse_complement()) for s in agg2["lineage_bc_corr"].astype(str)]
     out_bc = combo_dir / "denoised_barcodes.tsv"
     agg2.to_csv(out_bc, sep="\t", index=False)
 
@@ -191,9 +194,14 @@ def step_annotate(
         raise FileNotFoundError(f"Denoised barcode table not found: {denoised_barcodes_tsv}")
 
     agg2 = pd.read_csv(denoised_barcodes_tsv, sep="\t")
-    sequences = agg2["lineage_bc_corr"].astype(str).tolist()
-    sequences_rc = [str(Seq(s).reverse_complement()) for s in sequences]
-    agg2["query"] = sequences_rc
+    if "query" not in agg2.columns:
+        sequences = agg2["lineage_bc_corr"].astype(str).tolist()
+        sequences_rc = [str(Seq(s).reverse_complement()) for s in sequences]
+        agg2["query"] = sequences_rc
+        agg2.to_csv(denoised_barcodes_tsv, sep="\t", index=False)
+        logger.info(f"Added `query` column and updated: {denoised_barcodes_tsv}")
+    else:
+        sequences_rc = agg2["query"].astype(str).tolist()
 
     results_allele = analyze_sequences(
         sequences_rc,
@@ -204,9 +212,6 @@ def step_annotate(
 
     combo_dir = paths.combo_dir(reads_cutoff=reads_cutoff, umi_ld=umi_ld, lb_hd_relative=lb_hd_relative)
     combo_dir.mkdir(parents=True, exist_ok=True)
-    out_barcodes_with_query_tsv = combo_dir / "denoised_barcodes_with_query.tsv"
-    agg2.to_csv(out_barcodes_with_query_tsv, sep="\t", index=False)
-    logger.info(f"Denoised barcodes (+query) saved to: {out_barcodes_with_query_tsv}")
     out_tsv = combo_dir / "annotated.tsv"
     results_allele.to_csv(out_tsv, sep="\t", index=False)
     logger.info(f"Annotation results saved to: {out_tsv}")
@@ -244,8 +249,7 @@ def step_finalize(
     if "query" not in agg2.columns:
         raise ValueError(
             "Expected `query` column in denoised barcodes table. "
-            "If you ran `darlin bulk annotate`, pass the file it produces: "
-            "`denoised_barcodes_with_query.tsv` (in the same combo output directory as `annotated.tsv`)."
+            "Use `denoised_barcodes.tsv` from `darlin bulk denoise` (or after `annotate` has added `query`)."
         )
 
     final = agg2.merge(results_allele, on="query", how="left")
@@ -272,10 +276,10 @@ def step_finalize(
 
     combo_dir = paths.combo_dir(reads_cutoff=reads_cutoff, umi_ld=umi_ld, lb_hd_relative=lb_hd_relative)
     combo_dir.mkdir(parents=True, exist_ok=True)
-    out_csv = paths.combo_alleles_csv(reads_cutoff=reads_cutoff, umi_ld=umi_ld, lb_hd_relative=lb_hd_relative, sample_id=sample_id)
-    final2.to_csv(out_csv, index=False)
-    logger.info(f"Final alleles saved to: {out_csv}")
-    return out_csv
+    out_tsv = paths.combo_alleles_tsv(reads_cutoff=reads_cutoff, umi_ld=umi_ld, lb_hd_relative=lb_hd_relative)
+    final2.to_csv(out_tsv, sep="\t", index=False)
+    logger.info(f"Final alleles saved to: {out_tsv}")
+    return out_tsv
 
 
 def step_cleanup_pear(*, paths: BulkPaths, keep_pear: bool, logger: logging.Logger) -> None:
