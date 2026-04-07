@@ -199,6 +199,9 @@ def step_annotate(
 
     combo_dir = paths.combo_dir(reads_cutoff=reads_cutoff, umi_ld=umi_ld, lb_hd_relative=lb_hd_relative)
     combo_dir.mkdir(parents=True, exist_ok=True)
+    out_barcodes_with_query_tsv = combo_dir / "denoised_barcodes_with_query.tsv"
+    agg2.to_csv(out_barcodes_with_query_tsv, sep="\t", index=False)
+    logger.info(f"Denoised barcodes (+query) saved to: {out_barcodes_with_query_tsv}")
     out_tsv = combo_dir / "annotated.tsv"
     results_allele.to_csv(out_tsv, sep="\t", index=False)
     logger.info(f"Annotation results saved to: {out_tsv}")
@@ -234,7 +237,11 @@ def step_finalize(
     results_allele = pd.read_csv(annotated_tsv, sep="\t")
 
     if "query" not in agg2.columns:
-        raise ValueError("Expected `query` column in denoised barcodes table (produced by annotate step).")
+        raise ValueError(
+            "Expected `query` column in denoised barcodes table. "
+            "If you ran `darlin bulk annotate`, pass the file it produces: "
+            "`denoised_barcodes_with_query.tsv` (in the same combo output directory as `annotated.tsv`)."
+        )
 
     final = agg2.merge(results_allele, on="query", how="left")
     keep_cols = ["query", "UMIs", "mutations", "confidence", "aligned_query", "aligned_ref"]

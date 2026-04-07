@@ -4,6 +4,7 @@
 /data/
 !/tests/data/
 old/
+/temp/
 
 # python bytecode / caches
 __pycache__/

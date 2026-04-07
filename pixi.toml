@@ -15,6 +15,10 @@ test = "pytest -q"
 python = "3.11.*"
 pytest = ">=9.0.2,<10"
 pear = ">=0.9.6,<0.10"
+pandas = "*"
+tqdm = "*"
+biopython = "*"
+umi_tools = "*"
 pip = "*"
 
 [pypi-dependencies]
