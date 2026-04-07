@@ -7,6 +7,7 @@ version = "0.1.0"
 
 [tasks]
 smoke = "PYTHONPATH=src python -m darlin.cli --help && PYTHONPATH=src python -m darlin.cli bulk --help && PYTHONPATH=src python -m darlin.cli bulk run --help"
+install-cli = "python -m pip install -e ."
 compile = "python -m compileall src tests"
 test = "pytest -q"
 
@@ -14,6 +15,7 @@ test = "pytest -q"
 python = "3.11.*"
 pytest = ">=9.0.2,<10"
 pear = ">=0.9.6,<0.10"
+pip = "*"
 
 [pypi-dependencies]
 darlinpy = { git = "https://github.com/JarningGau/darlinpy" }

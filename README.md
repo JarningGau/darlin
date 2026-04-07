@@ -8,6 +8,7 @@
 git clone https://github.com/jarninggau/darlin.git
 cd darlin
 pixi install
+pixi run install-cli
 ```
 
 ## Quick Start

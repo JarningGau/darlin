@@ -1,21 +1,26 @@
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "darlin"
 version = "0.1.0"
-description = "DARLIN CLI (bulk, scrna, scmulti)"
+description = "DARLIN: unified CLI for bulk DNA/RNA, single-cell RNA-seq, and single-cell multi-modal datasets."
 readme = "README.md"
 requires-python = ">=3.11"
+license = { text = "Proprietary" }
 authors = [{ name = "JarningGau", email = "jarninggau@gmail.com" }]
+
+# Dependencies are managed by Pixi/conda in this repo. Keep pip metadata minimal
+# so `pip install -e .` works inside the Pixi environment without attempting to
+# resolve conda-only packages.
 dependencies = []
 
 [project.scripts]
 darlin = "darlin.cli:main"
 
 [tool.setuptools]
-package-dir = {"" = "src"}
+package-dir = { "" = "src" }
 
 [tool.setuptools.packages.find]
 where = ["src"]
