@@ -1,0 +1,20 @@
+# pixi environments
+.pixi/*
+!.pixi/config.toml
+/data/
+!/tests/data/
+old/
+
+# python bytecode / caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# coverage artifacts
+.coverage
+htmlcov/
+
+# builds / packaging
+build/
+dist/
+*.egg-info/

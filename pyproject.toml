@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "darlin"
+version = "0.1.0"
+description = "DARLIN CLI (bulk, scrna, scmulti)"
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [{ name = "JarningGau", email = "jarninggau@gmail.com" }]
+dependencies = []
+
+[project.scripts]
+darlin = "darlin.cli:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]

@@ -1,0 +1,19 @@
+[workspace]
+authors = ["JarningGau <jarninggau@gmail.com>"]
+channels = ["https://mirrors.westlake.edu.cn/ANACONDA/cloud/conda-forge", "https://mirrors.westlake.edu.cn/ANACONDA/cloud/bioconda"]
+name = "darlin"
+platforms = ["linux-64"]
+version = "0.1.0"
+
+[tasks]
+smoke = "PYTHONPATH=src python -m darlin.cli --help && PYTHONPATH=src python -m darlin.cli bulk --help && PYTHONPATH=src python -m darlin.cli bulk run --help"
+compile = "python -m compileall src tests"
+test = "pytest -q"
+
+[dependencies]
+python = "3.11.*"
+pytest = ">=9.0.2,<10"
+pear = ">=0.9.6,<0.10"
+
+[pypi-dependencies]
+darlinpy = { git = "https://github.com/JarningGau/darlinpy" }
