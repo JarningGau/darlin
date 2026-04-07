@@ -81,8 +81,8 @@ def _to_df(data, bc_col: str, umi_col: str, count_col: Optional[str]):
 
 def correct_lineage_and_umi(
     data: Union["pd.DataFrame", Sequence],  # noqa: F821
-    umi_col: str = "UMI",
-    bc_col: str = "lineage_bc",
+    umi_col: str = "UB",
+    bc_col: str = "LB",
     count_col: Optional[str] = None,
     n_iter: int = 2,
     umi_ld: int = 2,
@@ -98,8 +98,8 @@ def correct_lineage_and_umi(
 
     df, count_col = _to_df(data, bc_col=bc_col, umi_col=umi_col, count_col=count_col)
     out = df[[bc_col, umi_col, count_col]].copy()
-    out["umi_corr"] = out[umi_col]
-    out["lineage_bc_corr"] = out[bc_col]
+    out["UR"] = out[umi_col]
+    out["LR"] = out[bc_col]
 
     total_umi_merges = 0
     total_bc_merges = 0
@@ -108,14 +108,14 @@ def correct_lineage_and_umi(
 
     for i in range(n_iter):
         logger.info(f"Iteration {i+1}/{n_iter}")
-        out["__bc_len__"] = out["lineage_bc_corr"].str.len().astype(int)
+        out["__bc_len__"] = out["LR"].str.len().astype(int)
         bc_parent_total = {}
         for blen, sub in tqdm(
             out.groupby(["__bc_len__"]),
             desc="Collapsing barcodes (length-aware HD global)",
             leave=True,
         ):
-            cnt = Counter(dict(sub.groupby("lineage_bc_corr")[count_col].sum()))
+            cnt = Counter(dict(sub.groupby("LR")[count_col].sum()))
             if isinstance(blen, (tuple, list)):
                 blen = int(blen[0])
             else:
@@ -125,18 +125,18 @@ def correct_lineage_and_umi(
             hd_thresh_len = max(int(round(lb_hd_relative * blen)), 1)
             parent = collapse_within_hd(cnt.items(), max_hd=hd_thresh_len)
             bc_parent_total.update(parent)
-        before = out["lineage_bc_corr"].ne(out["lineage_bc_corr"].map(lambda b: bc_parent_total.get(b, b))).sum()
-        out["lineage_bc_corr"] = out["lineage_bc_corr"].map(lambda b: bc_parent_total.get(b, b))
+        before = out["LR"].ne(out["LR"].map(lambda b: bc_parent_total.get(b, b))).sum()
+        out["LR"] = out["LR"].map(lambda b: bc_parent_total.get(b, b))
         total_bc_merges += int(before)
 
         parent_all = {}
         for bc_val, sub in tqdm(
-            out.groupby("lineage_bc_corr"),
+            out.groupby("LR"),
             desc="Collapsing UMIs with umi_tools",
             leave=True,
         ):
             _ = bc_val
-            cnt_series = sub.groupby("umi_corr")[count_col].sum()
+            cnt_series = sub.groupby("UR")[count_col].sum()
             if cnt_series.empty:
                 continue
             umi_counts_bytes = {umi.encode(): int(c) for umi, c in cnt_series.items()}
@@ -149,17 +149,17 @@ def correct_lineage_and_umi(
                     umi_str = umi_bytes.decode()
                     parent_all[umi_str] = representative_str
 
-        before = out["umi_corr"].ne(out["umi_corr"].map(lambda u: parent_all.get(u, u))).sum()
-        out["umi_corr"] = out["umi_corr"].map(lambda u: parent_all.get(u, u))
+        before = out["UR"].ne(out["UR"].map(lambda u: parent_all.get(u, u))).sum()
+        out["UR"] = out["UR"].map(lambda u: parent_all.get(u, u))
         total_umi_merges += int(before)
 
     agg = (
-        out.groupby(["lineage_bc_corr", "umi_corr"], as_index=False)[count_col]
+        out.groupby(["LR", "UR"], as_index=False)[count_col]
         .sum()
-        .rename(columns={count_col: "n_reads"})
+        .rename(columns={count_col: "reads"})
     )
 
-    mapping = out[[bc_col, umi_col, "lineage_bc_corr", "umi_corr"]].copy().drop_duplicates()
+    mapping = out[[bc_col, umi_col, "LR", "UR"]].copy().drop_duplicates()
 
     stats = {
         "n_input_rows": int(len(df)),

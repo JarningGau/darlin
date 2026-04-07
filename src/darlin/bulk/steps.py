@@ -80,8 +80,8 @@ def step_extract(
                 lineage_bc = seq[s:e]
                 results.append((lineage_bc, umi))
 
-    df = pd.DataFrame(results, columns=["lineage_bc", "UMI"])
-    df["bc_len"] = df["lineage_bc"].str.len()
+    df = pd.DataFrame(results, columns=["LB", "UB"])
+    df["LB_len"] = df["LB"].str.len()
 
     paths.sample_dir.mkdir(parents=True, exist_ok=True)
     out_tsv = paths.extracted_tsv
@@ -104,11 +104,11 @@ def step_filter(
         raise FileNotFoundError(f"Extracted table not found: {extracted_tsv}")
 
     df = pd.read_csv(extracted_tsv, sep="\t")
-    df["bc_len"] = df["lineage_bc"].astype(str).str.len()
-    df = df[df["bc_len"] >= int(min_bc_len)]
+    df["LB_len"] = df["LB"].astype(str).str.len()
+    df = df[df["LB_len"] >= int(min_bc_len)]
 
-    df = df.groupby(["lineage_bc", "UMI"]).size().reset_index(name="reads")
-    df["bc_len"] = df["lineage_bc"].astype(str).str.len()
+    df = df.groupby(["LB", "UB"]).size().reset_index(name="reads")
+    df["LB_len"] = df["LB"].astype(str).str.len()
     df.sort_values(by="reads", ascending=False, inplace=True)
 
     out_tsv = paths.filtered_tsv
@@ -143,12 +143,12 @@ def step_denoise(
             f"No rows remain after applying reads_cutoff={reads_cutoff} "
             f"(from {n_before} aggregated pairs in {filtered_tsv})."
         )
-    # correct_lineage_and_umi expects (lineage_bc, UMI, reads)
+    # correct_lineage_and_umi expects (LB, UB, reads)
     agg, _mapping, stats = correct_lineage_and_umi(
-        df.rename(columns={"reads": "n_reads"}),
-        umi_col="UMI",
-        bc_col="lineage_bc",
-        count_col="n_reads",
+        df,
+        umi_col="UB",
+        bc_col="LB",
+        count_col="reads",
         n_iter=int(denoise_iter),
         umi_ld=int(umi_ld),
         lb_hd_relative=float(lb_hd_relative),
@@ -164,9 +164,9 @@ def step_denoise(
 
     from Bio.Seq import Seq  # type: ignore
 
-    agg2 = agg.groupby("lineage_bc_corr").size().reset_index(name="UMIs")
+    agg2 = agg.groupby("LR").size().reset_index(name="UMIs")
     agg2.sort_values(by="UMIs", ascending=False, inplace=True)
-    agg2["query"] = [str(Seq(s).reverse_complement()) for s in agg2["lineage_bc_corr"].astype(str)]
+    agg2["query"] = [str(Seq(s).reverse_complement()) for s in agg2["LR"].astype(str)]
     out_bc = combo_dir / "denoised_barcodes.tsv"
     agg2.to_csv(out_bc, sep="\t", index=False)
 
@@ -195,7 +195,7 @@ def step_annotate(
 
     agg2 = pd.read_csv(denoised_barcodes_tsv, sep="\t")
     if "query" not in agg2.columns:
-        sequences = agg2["lineage_bc_corr"].astype(str).tolist()
+        sequences = agg2["LR"].astype(str).tolist()
         sequences_rc = [str(Seq(s).reverse_complement()) for s in sequences]
         agg2["query"] = sequences_rc
         agg2.to_csv(denoised_barcodes_tsv, sep="\t", index=False)
