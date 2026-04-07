@@ -42,12 +42,12 @@ darlin bulk run \
 |----------|---------|---------|
 | `--umi-len` | `12` | Number of leading bases interpreted as the UMI during extraction. Reads with `N` in the UMI are excluded. |
 | `--min-bc-len` | `20` | Minimum lineage-barcode length retained during filtering and annotation. |
-| `--reads-cutoff` | `1` | Minimum read support required for an aggregated `(lineage barcode, UMI)` pair. |
 
 ### Denoising Arguments
 
 | Argument | Default | Meaning |
 |----------|---------|---------|
+| `--reads-cutoff` | `1` | Minimum read support for an aggregated `(lineage barcode, UMI)` pair; enforced when denoising (also used in combo output directory names). |
 | `--denoise-iter` | `1` | Number of denoising iterations passed to barcode/UMI correction. |
 | `--umi-ld` | `1` | One or more UMI edit-distance thresholds. |
 | `--lb-hd-relative` | `0.01` | One or more relative lineage-barcode Hamming-distance thresholds. |
@@ -74,7 +74,7 @@ When either `--umi-ld` or `--lb-hd-relative` is provided with multiple values, t
 
 - `--sample-n` takes precedence over `--test`. If both are supplied, the explicit `N`-read limit is used.
 - `--skip-pear` requires the assembled FASTQ to be present at the expected location unless an individual subcommand accepts an explicit replacement path.
-- `--reads-cutoff` affects both filtering behavior and downstream output-directory naming.
+- `--reads-cutoff` is applied in the denoise step (not in `filter`) and appears in combo output-directory names.
 - `--umi-ld` and `--lb-hd-relative` define a parameter grid rather than a single joint setting when multiple values are supplied.
 
 ## Primary Outputs
@@ -83,7 +83,7 @@ When either `--umi-ld` or `--lb-hd-relative` is provided with multiple values, t
 |------|-------------|
 | `<output-dir>/<sample-id>/<sample-id>.log` | Pipeline log file. |
 | `<output-dir>/<sample-id>/extracted.tsv` | Extracted lineage barcode and UMI table prior to aggregation. |
-| `<output-dir>/<sample-id>/filtered.tsv` | Aggregated table after barcode-length and read-support filtering. |
+| `<output-dir>/<sample-id>/filtered.tsv` | Aggregated `(lineage barcode, UMI)` table after barcode-length filtering; includes all read counts before the denoise-time `--reads-cutoff`. |
 | `<output-dir>/<sample-id>/reads_<...>/denoised_agg.tsv` | Denoised barcode/UMI table for one parameter combination. |
 | `<output-dir>/<sample-id>/reads_<...>/denoised_barcodes.tsv` | Barcode-level summary used for allele annotation. |
 | `<output-dir>/<sample-id>/reads_<...>/denoised_barcodes_with_query.tsv` | Denoised barcodes augmented with reverse-complement query sequences for annotation/finalization. |
@@ -110,7 +110,6 @@ darlin bulk extract \
 darlin bulk filter \
   --sample-id L141_CA \
   --output-dir ./output \
-  --reads-cutoff 1 \
   --min-bc-len 20
 
 darlin bulk denoise \
@@ -136,7 +135,7 @@ darlin bulk finalize \
 
 - `darlin bulk pear` assembles paired-end reads and writes `pear/pear.assembled.fastq`.
 - `darlin bulk extract` can consume the default assembled FASTQ or an explicit `--assembled-fq` path.
-- `darlin bulk filter` can consume the default `extracted.tsv` or an explicit `--extracted` path.
+- `darlin bulk filter` can consume the default `extracted.tsv` or an explicit `--extracted` path (length filter and aggregation only; no `--reads-cutoff`).
 - `darlin bulk denoise` can consume the default `filtered.tsv` or an explicit `--filtered` path.
 - `darlin bulk annotate` requires `--denoised-barcodes`.
 - `darlin bulk finalize` requires both `--annotated` and a denoised barcode table that includes the `query` column; in routine use, this should be `denoised_barcodes_with_query.tsv`.

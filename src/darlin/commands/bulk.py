@@ -71,7 +71,7 @@ def _add_bulk_extract(steps: argparse._SubParsersAction) -> None:
 
 def _add_bulk_filter(steps: argparse._SubParsersAction) -> None:
     p = steps.add_parser("filter", help="Filter/aggregate extracted reads")
-    _add_common_bulk_args(p, include_fqs=False)
+    _add_common_bulk_args(p, include_fqs=False, include_reads_cutoff=False)
     p.add_argument(
         "--extracted",
         type=str,
@@ -124,13 +124,24 @@ def _add_bulk_finalize(steps: argparse._SubParsersAction) -> None:
     p.set_defaults(func=_bulk_finalize)
 
 
-def _add_common_bulk_args(p: argparse.ArgumentParser, *, include_fqs: bool) -> None:
+def _add_common_bulk_args(
+    p: argparse.ArgumentParser,
+    *,
+    include_fqs: bool,
+    include_reads_cutoff: bool = True,
+) -> None:
     p.add_argument("--sample-id", type=str, required=True, help="Sample ID for output directory naming")
     p.add_argument("--output-dir", type=str, default="./output", help="Base output directory")
     p.add_argument("--locus", type=str, default="Col1a1", help="Locus name (darlinpy config key)")
     p.add_argument("--umi-len", type=int, default=12, help="UMI length")
     p.add_argument("--min-bc-len", type=int, default=20, help="Minimum barcode length")
-    p.add_argument("--reads-cutoff", type=int, default=1, help="Reads cutoff threshold")
+    if include_reads_cutoff:
+        p.add_argument(
+            "--reads-cutoff",
+            type=int,
+            default=1,
+            help="Minimum read support per (lineage barcode, UMI) pair; applied at denoising (not at filter)",
+        )
     p.add_argument("--pear-path", type=str, default="pear", help="Path to PEAR executable")
     p.add_argument("--threads", type=int, default=8, help="Number of threads for PEAR")
     if include_fqs:
@@ -260,7 +271,6 @@ def _bulk_filter(args: argparse.Namespace) -> int:
     step_filter(
         extracted_tsv=extracted,
         min_bc_len=args.min_bc_len,
-        reads_cutoff=args.reads_cutoff,
         paths=paths,
         logger=logger,
     )

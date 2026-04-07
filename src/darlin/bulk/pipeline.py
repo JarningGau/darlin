@@ -101,7 +101,6 @@ def run_bulk_pipeline(
     filtered_tsv = step_filter(
         extracted_tsv=extracted_tsv,
         min_bc_len=min_bc_len,
-        reads_cutoff=reads_cutoff,
         paths=paths,
         logger=logger,
     )

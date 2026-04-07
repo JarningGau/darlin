@@ -94,7 +94,6 @@ def step_filter(
     *,
     extracted_tsv: str | Path,
     min_bc_len: int,
-    reads_cutoff: int,
     paths: BulkPaths,
     logger: logging.Logger,
 ) -> Path:
@@ -112,11 +111,8 @@ def step_filter(
     df["bc_len"] = df["lineage_bc"].astype(str).str.len()
     df.sort_values(by="reads", ascending=False, inplace=True)
 
-    filtered = df[df["reads"] >= int(reads_cutoff)].copy()
-    filtered["bc_len"] = filtered["lineage_bc"].astype(str).str.len()
-
     out_tsv = paths.filtered_tsv
-    filtered.to_csv(out_tsv, sep="\t", index=False)
+    df.to_csv(out_tsv, sep="\t", index=False)
     logger.info(f"Filtered table saved to: {out_tsv}")
     return out_tsv
 
@@ -138,6 +134,15 @@ def step_denoise(
         raise FileNotFoundError(f"Filtered table not found: {filtered_tsv}")
 
     df = pd.read_csv(filtered_tsv, sep="\t")
+    if "reads" not in df.columns:
+        raise ValueError(f"Expected a 'reads' column in {filtered_tsv}")
+    n_before = len(df)
+    df = df[df["reads"] >= int(reads_cutoff)].copy()
+    if df.empty:
+        raise ValueError(
+            f"No rows remain after applying reads_cutoff={reads_cutoff} "
+            f"(from {n_before} aggregated pairs in {filtered_tsv})."
+        )
     # correct_lineage_and_umi expects (lineage_bc, UMI, reads)
     agg, _mapping, stats = correct_lineage_and_umi(
         df.rename(columns={"reads": "n_reads"}),
