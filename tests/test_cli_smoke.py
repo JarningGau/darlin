@@ -19,7 +19,6 @@ def test_top_level_help_mentions_commands() -> None:
     assert r.returncode == 0
     assert "bulk" in r.stdout
     assert "scrna" in r.stdout
-    assert "scmulti" in r.stdout
 
 
 def test_bulk_help_mentions_steps() -> None:

@@ -5,7 +5,6 @@ import sys
 
 from darlin.commands.bulk import add_bulk_command
 from darlin.commands.scrna import add_scrna_command
-from darlin.commands.scmulti import add_scmulti_command
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -21,7 +20,6 @@ def build_parser() -> argparse.ArgumentParser:
 
     add_bulk_command(subparsers)
     add_scrna_command(subparsers)
-    add_scmulti_command(subparsers)
 
     return parser
 

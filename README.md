@@ -23,7 +23,6 @@ Primary subcommands:
 
 - `bulk`: recovery of lineage information from bulk DNA/RNA data
 - `scrna`: recovery of lineage information from single-cell RNA-seq data
-- `scmulti`: recovery of lineage information from single-cell multi-modal data
 
 ## Quick Start
 
