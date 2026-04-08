@@ -7,6 +7,17 @@ from pathlib import Path
 from darlin.bulk.validate import BulkInputError, require_pear_executable, require_readable_files
 
 
+def _get_bulk_paths_cli(output_dir: str, sample_id: str):
+    """Resolve bulk output paths or print validation error and return None."""
+    from darlin.bulk.paths import get_bulk_paths
+
+    try:
+        return get_bulk_paths(output_dir, sample_id)
+    except ValueError as e:
+        print(e, file=sys.stderr)
+        return None
+
+
 def add_bulk_command(subparsers: argparse._SubParsersAction) -> None:
     bulk = subparsers.add_parser(
         "bulk",
@@ -158,10 +169,11 @@ def _add_common_bulk_args(
 
 
 def _bulk_run(args: argparse.Namespace) -> int:
-    from darlin.bulk.paths import get_bulk_paths
     from darlin.bulk.pipeline import run_bulk_pipeline
 
-    paths = get_bulk_paths(args.output_dir, args.sample_id)
+    paths = _get_bulk_paths_cli(args.output_dir, args.sample_id)
+    if paths is None:
+        return 1
     try:
         if args.skip_pear:
             require_readable_files(
@@ -206,7 +218,6 @@ def _bulk_pear(args: argparse.Namespace) -> int:
     import logging
 
     from darlin.bulk.logging import setup_logging
-    from darlin.bulk.paths import get_bulk_paths
     from darlin.bulk.steps import step_pear
 
     try:
@@ -221,7 +232,10 @@ def _bulk_pear(args: argparse.Namespace) -> int:
         print(e, file=sys.stderr)
         return 1
 
-    paths = get_bulk_paths(args.output_dir, args.sample_id)
+    paths = _get_bulk_paths_cli(args.output_dir, args.sample_id)
+    if paths is None:
+        return 1
+    paths.ensure_dirs()
     logger = setup_logging(paths.log_file, getattr(logging, args.log_level.upper(), logging.INFO))
     step_pear(fq1=args.fq1, fq2=args.fq2, paths=paths, pear_path=args.pear_path, threads=args.threads, logger=logger)
     return 0
@@ -231,11 +245,13 @@ def _bulk_extract(args: argparse.Namespace) -> int:
     import logging
 
     from darlin.bulk.logging import setup_logging
-    from darlin.bulk.paths import get_bulk_paths
     from darlin.bulk.pipeline import resolve_bulk_primers
     from darlin.bulk.steps import step_extract
 
-    paths = get_bulk_paths(args.output_dir, args.sample_id)
+    paths = _get_bulk_paths_cli(args.output_dir, args.sample_id)
+    if paths is None:
+        return 1
+    paths.ensure_dirs()
     assembled = Path(args.assembled_fq) if args.assembled_fq else paths.assembled_fastq
     try:
         require_readable_files([("Assembled FASTQ (--assembled-fq or default pear output)", assembled)])
@@ -266,10 +282,12 @@ def _bulk_filter(args: argparse.Namespace) -> int:
     import logging
 
     from darlin.bulk.logging import setup_logging
-    from darlin.bulk.paths import get_bulk_paths
     from darlin.bulk.steps import step_filter
 
-    paths = get_bulk_paths(args.output_dir, args.sample_id)
+    paths = _get_bulk_paths_cli(args.output_dir, args.sample_id)
+    if paths is None:
+        return 1
+    paths.ensure_dirs()
     extracted = Path(args.extracted) if args.extracted else paths.extracted_tsv
     try:
         require_readable_files([("Extracted TSV (--extracted or default)", extracted)])
@@ -291,16 +309,25 @@ def _bulk_denoise(args: argparse.Namespace) -> int:
     import logging
 
     from darlin.bulk.logging import setup_logging
-    from darlin.bulk.paths import get_bulk_paths
     from darlin.bulk.steps import step_denoise
 
-    paths = get_bulk_paths(args.output_dir, args.sample_id)
+    paths = _get_bulk_paths_cli(args.output_dir, args.sample_id)
+    if paths is None:
+        return 1
+    paths.ensure_dirs()
     filtered = Path(args.filtered) if args.filtered else paths.filtered_tsv
     try:
         require_readable_files([("Filtered TSV (--filtered or default)", filtered)])
     except BulkInputError as e:
         print(e, file=sys.stderr)
         return 1
+
+    combo = paths.combo_paths(
+        reads_cutoff=args.reads_cutoff,
+        umi_ld=args.umi_ld,
+        lb_hd_relative=args.lb_hd_relative,
+    )
+    combo.ensure_dir()
 
     logger = setup_logging(paths.log_file, getattr(logging, args.log_level.upper(), logging.INFO))
     step_denoise(
@@ -309,7 +336,7 @@ def _bulk_denoise(args: argparse.Namespace) -> int:
         denoise_iter=args.denoise_iter,
         umi_ld=args.umi_ld,
         lb_hd_relative=args.lb_hd_relative,
-        paths=paths,
+        combo=combo,
         logger=logger,
         show_progress=not bool(args.no_progress),
     )
@@ -320,25 +347,31 @@ def _bulk_annotate(args: argparse.Namespace) -> int:
     import logging
 
     from darlin.bulk.logging import setup_logging
-    from darlin.bulk.paths import get_bulk_paths
     from darlin.bulk.steps import step_annotate
 
-    paths = get_bulk_paths(args.output_dir, args.sample_id)
+    paths = _get_bulk_paths_cli(args.output_dir, args.sample_id)
+    if paths is None:
+        return 1
+    paths.ensure_dirs()
     try:
         require_readable_files([("Denoised barcodes (--denoised-barcodes)", args.denoised_barcodes)])
     except BulkInputError as e:
         print(e, file=sys.stderr)
         return 1
 
+    combo = paths.combo_paths(
+        reads_cutoff=args.reads_cutoff,
+        umi_ld=args.umi_ld,
+        lb_hd_relative=args.lb_hd_relative,
+    )
+    combo.ensure_dir()
+
     logger = setup_logging(paths.log_file, getattr(logging, args.log_level.upper(), logging.INFO))
     step_annotate(
         denoised_barcodes_tsv=args.denoised_barcodes,
         locus=args.locus,
         min_bc_len=args.min_bc_len,
-        paths=paths,
-        reads_cutoff=args.reads_cutoff,
-        umi_ld=args.umi_ld,
-        lb_hd_relative=args.lb_hd_relative,
+        combo=combo,
         logger=logger,
     )
     return 0
@@ -348,10 +381,12 @@ def _bulk_finalize(args: argparse.Namespace) -> int:
     import logging
 
     from darlin.bulk.logging import setup_logging
-    from darlin.bulk.paths import get_bulk_paths
     from darlin.bulk.steps import step_finalize
 
-    paths = get_bulk_paths(args.output_dir, args.sample_id)
+    paths = _get_bulk_paths_cli(args.output_dir, args.sample_id)
+    if paths is None:
+        return 1
+    paths.ensure_dirs()
     try:
         require_readable_files(
             [
@@ -363,15 +398,19 @@ def _bulk_finalize(args: argparse.Namespace) -> int:
         print(e, file=sys.stderr)
         return 1
 
+    combo = paths.combo_paths(
+        reads_cutoff=args.reads_cutoff,
+        umi_ld=args.umi_ld,
+        lb_hd_relative=args.lb_hd_relative,
+    )
+    combo.ensure_dir()
+
     logger = setup_logging(paths.log_file, getattr(logging, args.log_level.upper(), logging.INFO))
     step_finalize(
         denoised_barcodes_tsv=args.denoised_barcodes,
         annotated_tsv=args.annotated,
         sample_id=args.sample_id,
-        paths=paths,
-        reads_cutoff=args.reads_cutoff,
-        umi_ld=args.umi_ld,
-        lb_hd_relative=args.lb_hd_relative,
+        combo=combo,
         logger=logger,
     )
     return 0

@@ -8,7 +8,7 @@ from pathlib import Path
 from darlin.bulk.denoise import correct_lineage_and_umi
 from darlin.bulk.io import iter_fastq_raw, open_fastq_text
 from darlin.bulk.matching import find_all_matches, get_mm_dist
-from darlin.bulk.paths import BulkPaths
+from darlin.bulk.paths import BulkPaths, ComboPaths
 from darlin.bulk.pear import assemble_pe_reads
 
 
@@ -21,14 +21,11 @@ def step_pear(
     threads: int = 8,
     logger: logging.Logger,
 ) -> Path:
-    paths.pear_dir.mkdir(parents=True, exist_ok=True)
-    pear_out_prefix = paths.pear_dir / "pear"
-    pear_log = paths.pear_dir / "pear.log"
     assemble_pe_reads(
         fq1,
         fq2,
-        out_prefix=pear_out_prefix,
-        log_file=pear_log,
+        out_prefix=paths.pear_out_prefix,
+        log_file=paths.pear_log,
         pear_path=pear_path,
         threads=threads,
         logger=logger,
@@ -91,7 +88,6 @@ def step_extract(
     df = pd.DataFrame(results, columns=["LB", "UB"])
     df["LB_len"] = df["LB"].str.len()
 
-    paths.sample_dir.mkdir(parents=True, exist_ok=True)
     out_tsv = paths.extracted_tsv
     df.to_csv(out_tsv, sep="\t", index=False)
     logger.info(
@@ -141,7 +137,7 @@ def step_denoise(
     denoise_iter: int,
     umi_ld: int,
     lb_hd_relative: float,
-    paths: BulkPaths,
+    combo: ComboPaths,
     logger: logging.Logger,
     show_progress: bool = True,
 ) -> tuple[Path, Path]:
@@ -173,19 +169,14 @@ def step_denoise(
         logger=logger,
         show_progress=show_progress,
     )
-    combo_dir = paths.combo_dir(reads_cutoff=int(reads_cutoff), umi_ld=umi_ld, lb_hd_relative=lb_hd_relative)
-    combo_dir.mkdir(parents=True, exist_ok=True)
-
-    out_agg = combo_dir / "denoised_agg.tsv"
-    agg.to_csv(out_agg, sep="\t", index=False)
+    agg.to_csv(combo.denoised_agg_tsv, sep="\t", index=False)
 
     from Bio.Seq import Seq  # type: ignore
 
     agg2 = agg.groupby("LR").size().reset_index(name="UMIs")
     agg2.sort_values(by="UMIs", ascending=False, inplace=True)
     agg2["query"] = [str(Seq(s).reverse_complement()) for s in agg2["LR"].astype(str)]
-    out_bc = combo_dir / "denoised_barcodes.tsv"
-    agg2.to_csv(out_bc, sep="\t", index=False)
+    agg2.to_csv(combo.denoised_barcodes_tsv, sep="\t", index=False)
 
     logger.info(
         "Denoise: umi_ld=%s lb_hd_relative=%s n_input_rows=%s "
@@ -198,9 +189,9 @@ def step_denoise(
         stats["n_unique_pairs_after"],
         stats["umi_merges"],
         stats["barcode_merges"],
-        out_bc,
+        combo.denoised_barcodes_tsv,
     )
-    return out_agg, out_bc
+    return combo.denoised_agg_tsv, combo.denoised_barcodes_tsv
 
 
 def step_annotate(
@@ -208,10 +199,7 @@ def step_annotate(
     denoised_barcodes_tsv: str | Path,
     locus: str,
     min_bc_len: int,
-    paths: BulkPaths,
-    reads_cutoff: int,
-    umi_ld: int,
-    lb_hd_relative: float,
+    combo: ComboPaths,
     logger: logging.Logger,
 ) -> Path:
     import pandas as pd  # type: ignore
@@ -240,12 +228,14 @@ def step_annotate(
         verbose=False,
     ).to_df()
 
-    combo_dir = paths.combo_dir(reads_cutoff=reads_cutoff, umi_ld=umi_ld, lb_hd_relative=lb_hd_relative)
-    combo_dir.mkdir(parents=True, exist_ok=True)
-    out_tsv = combo_dir / "annotated.tsv"
-    results_allele.to_csv(out_tsv, sep="\t", index=False)
-    logger.info("Annotation: analyzed_queries=%s rows_out=%s -> %s", n_queries, len(results_allele), out_tsv)
-    return out_tsv
+    results_allele.to_csv(combo.annotated_tsv, sep="\t", index=False)
+    logger.info(
+        "Annotation: analyzed_queries=%s rows_out=%s -> %s",
+        n_queries,
+        len(results_allele),
+        combo.annotated_tsv,
+    )
+    return combo.annotated_tsv
 
 
 def _concat_and_md5(aligned_query: str, aligned_ref: str) -> str:
@@ -258,10 +248,7 @@ def step_finalize(
     denoised_barcodes_tsv: str | Path,
     annotated_tsv: str | Path,
     sample_id: str,
-    paths: BulkPaths,
-    reads_cutoff: int,
-    umi_ld: int,
-    lb_hd_relative: float,
+    combo: ComboPaths,
     logger: logging.Logger,
 ) -> Path:
     import pandas as pd  # type: ignore
@@ -304,12 +291,9 @@ def step_finalize(
         .reset_index(drop=True)
     )
 
-    combo_dir = paths.combo_dir(reads_cutoff=reads_cutoff, umi_ld=umi_ld, lb_hd_relative=lb_hd_relative)
-    combo_dir.mkdir(parents=True, exist_ok=True)
-    out_tsv = paths.combo_alleles_tsv(reads_cutoff=reads_cutoff, umi_ld=umi_ld, lb_hd_relative=lb_hd_relative)
-    final2.to_csv(out_tsv, sep="\t", index=False)
-    logger.info(f"Final alleles saved to: {out_tsv}")
-    return out_tsv
+    final2.to_csv(combo.alleles_tsv, sep="\t", index=False)
+    logger.info(f"Final alleles saved to: {combo.alleles_tsv}")
+    return combo.alleles_tsv
 
 
 def step_cleanup_pear(*, paths: BulkPaths, keep_pear: bool, logger: logging.Logger) -> None:

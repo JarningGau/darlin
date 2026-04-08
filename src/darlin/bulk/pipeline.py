@@ -178,8 +178,7 @@ def run_bulk_pipeline(
     show_progress: bool = True,
 ) -> int:
     paths = get_bulk_paths(output_dir=output_dir, sample_id=sample_id)
-    paths.sample_dir.mkdir(parents=True, exist_ok=True)
-    paths.pear_dir.mkdir(parents=True, exist_ok=True)
+    paths.ensure_dirs()
 
     level = getattr(logging, log_level.upper(), logging.INFO)
     logger = setup_logging(paths.log_file, level)
@@ -259,8 +258,8 @@ def run_bulk_pipeline(
     combo_allele_paths: list[Path] = []
     for umi_ld in umi_ld_list:
         for lb_rel in lb_hd_relative_list:
-            combo_dir = paths.combo_dir(reads_cutoff=reads_cutoff, umi_ld=umi_ld, lb_hd_relative=lb_rel)
-            combo_dir.mkdir(parents=True, exist_ok=True)
+            combo = paths.combo_paths(reads_cutoff=reads_cutoff, umi_ld=umi_ld, lb_hd_relative=lb_rel)
+            combo.ensure_dir()
 
             from darlin.bulk.steps import step_denoise  # lazy import
 
@@ -272,7 +271,7 @@ def run_bulk_pipeline(
                 denoise_iter=denoise_iter,
                 umi_ld=umi_ld,
                 lb_hd_relative=lb_rel,
-                paths=paths,
+                combo=combo,
                 logger=logger,
                 show_progress=show_progress,
             )
@@ -282,10 +281,7 @@ def run_bulk_pipeline(
                 denoised_barcodes_tsv=denoised_barcodes_tsv,
                 locus=locus,
                 min_bc_len=min_bc_len,
-                paths=paths,
-                reads_cutoff=reads_cutoff,
-                umi_ld=umi_ld,
-                lb_hd_relative=lb_rel,
+                combo=combo,
                 logger=logger,
             )
 
@@ -294,10 +290,7 @@ def run_bulk_pipeline(
                 denoised_barcodes_tsv=denoised_barcodes_tsv,
                 annotated_tsv=annotated_tsv,
                 sample_id=sample_id,
-                paths=paths,
-                reads_cutoff=reads_cutoff,
-                umi_ld=umi_ld,
-                lb_hd_relative=lb_rel,
+                combo=combo,
                 logger=logger,
             )
             combo_allele_paths.append(alleles_tsv)

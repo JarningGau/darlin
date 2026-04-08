@@ -22,7 +22,7 @@ darlin bulk run \
 
 | Argument | Meaning |
 |----------|---------|
-| `--sample-id` | Sample identifier used for naming the output directory under `--output-dir`. |
+| `--sample-id` | Sample identifier used for naming the output directory under `--output-dir`. Must be a single path segment (no `/` or `\`). |
 | `--fq1` | Forward FASTQ input for paired-end assembly. |
 | `--fq2` | Reverse FASTQ input for paired-end assembly. |
 
@@ -57,6 +57,8 @@ When either `--umi-ld` or `--lb-hd-relative` is provided with multiple values, t
 
 `<output-dir>/<sample-id>/reads_<reads-cutoff>_u_<umi-ld>_l_<lb-hd-relative>/`
 
+The `lb-hd-relative` part is formatted with a stable 4-significant-digit general format (`g` conversion), e.g. `0.01` stays `0.01`, `0.0001` becomes `0.0001`.
+
 ### PEAR Control
 
 | Argument | Default | Meaning |
@@ -82,7 +84,7 @@ When either `--umi-ld` or `--lb-hd-relative` is provided with multiple values, t
 
 | Path | Description |
 |------|-------------|
-| `<output-dir>/<sample-id>/run.log` | Pipeline log file. |
+| `<output-dir>/<sample-id>/run.log` | Pipeline log file. New entries are appended (not overwritten) when a subcommand runs again. |
 | `<output-dir>/<sample-id>/extracted.tsv` | Extracted lineage barcode and UMI table prior to aggregation. |
 | `<output-dir>/<sample-id>/filtered.tsv` | Aggregated `(lineage barcode, UMI)` table after barcode-length filtering; includes all read counts before the denoise-time `--reads-cutoff`. |
 | `<output-dir>/<sample-id>/reads_<...>/denoised_agg.tsv` | Denoised barcode/UMI table for one parameter combination. |

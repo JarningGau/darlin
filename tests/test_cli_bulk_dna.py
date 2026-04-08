@@ -100,6 +100,30 @@ def test_cli_bulk_run_missing_fq1_exits_cleanly(tmp_path: Path) -> None:
     assert "Forward reads" in r.stderr or "--fq1" in r.stderr
 
 
+def test_cli_bulk_run_invalid_sample_id_exits_cleanly(tmp_path: Path) -> None:
+    fq2 = Path("tests/data/bulkdna/L141_CA_R2.fq.gz")
+    assert fq2.exists()
+
+    r = _run(
+        "bulk",
+        "run",
+        "--sample-id",
+        "bad/sample",
+        "--fq1",
+        str(tmp_path / "x.fq.gz"),
+        "--fq2",
+        str(fq2),
+        "--output-dir",
+        str(tmp_path / "out"),
+        "--threads",
+        "1",
+        "--skip-pear",
+    )
+    assert r.returncode == 1, f"stdout:\n{r.stdout}\n\nstderr:\n{r.stderr}"
+    assert "Traceback" not in r.stderr
+    assert "sample_id" in r.stderr or "path separators" in r.stderr
+
+
 def test_cli_bulk_pear_missing_fq2_exits_cleanly(tmp_path: Path) -> None:
     fq1 = Path("tests/data/bulkdna/L141_CA_R1.fq.gz")
     assert fq1.exists()

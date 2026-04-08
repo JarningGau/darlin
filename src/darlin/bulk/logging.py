@@ -20,7 +20,7 @@ def setup_logging(log_file: str | Path, log_level: int = logging.INFO) -> loggin
     log_path = Path(log_file)
     log_path.parent.mkdir(parents=True, exist_ok=True)
 
-    file_handler = logging.FileHandler(log_path, mode="w")
+    file_handler = logging.FileHandler(log_path, mode="a")
     file_handler.setLevel(log_level)
     file_handler.setFormatter(formatter)
     logger.addHandler(file_handler)
