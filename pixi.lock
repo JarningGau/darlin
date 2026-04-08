@@ -11,6 +11,7 @@ environments:
     packages:
       linux-64:
       - conda: https://mirrors.westlake.edu.cn/ANACONDA/cloud/conda-forge/linux-64/_openmp_mutex-4.5-20_gnu.conda
+      - conda: https://mirrors.westlake.edu.cn/ANACONDA/cloud/conda-forge/noarch/attrs-26.1.0-pyhcf101f3_0.conda
       - conda: https://mirrors.westlake.edu.cn/ANACONDA/cloud/conda-forge/linux-64/biopython-1.86-py311h49ec1c0_1.conda
       - conda: https://mirrors.westlake.edu.cn/ANACONDA/cloud/conda-forge/linux-64/brotli-1.2.0-hed03a55_1.conda
       - conda: https://mirrors.westlake.edu.cn/ANACONDA/cloud/conda-forge/linux-64/brotli-bin-1.2.0-hb03c661_1.conda
@@ -24,6 +25,7 @@ environments:
       - conda: https://mirrors.westlake.edu.cn/ANACONDA/cloud/conda-forge/linux-64/fonttools-4.61.1-py311h3778330_0.conda
       - conda: https://mirrors.westlake.edu.cn/ANACONDA/cloud/conda-forge/linux-64/freetype-2.14.2-ha770c72_0.conda
       - conda: https://mirrors.westlake.edu.cn/ANACONDA/cloud/conda-forge/noarch/future-1.0.0-pyhd8ed1ab_2.conda
+      - conda: https://mirrors.westlake.edu.cn/ANACONDA/cloud/conda-forge/linux-64/fuzzysearch-0.8.1-py311h1ddb823_0.conda
       - conda: https://mirrors.westlake.edu.cn/ANACONDA/cloud/conda-forge/linux-64/icu-78.2-h33c6efd_0.conda
       - conda: https://mirrors.westlake.edu.cn/ANACONDA/cloud/conda-forge/noarch/iniconfig-2.3.0-pyhd8ed1ab_0.conda
       - conda: https://mirrors.westlake.edu.cn/ANACONDA/cloud/conda-forge/linux-64/keyutils-1.6.3-hb9d3cd8_0.conda
@@ -106,9 +108,7 @@ environments:
       - conda: https://mirrors.westlake.edu.cn/ANACONDA/cloud/conda-forge/linux-64/xorg-libxdmcp-1.1.5-hb03c661_1.conda
       - conda: https://mirrors.westlake.edu.cn/ANACONDA/cloud/conda-forge/linux-64/zlib-ng-2.3.3-hceb46e0_1.conda
       - conda: https://mirrors.westlake.edu.cn/ANACONDA/cloud/conda-forge/linux-64/zstd-1.5.7-hb78ec9c_6.conda
-      - pypi: https://files.pythonhosted.org/packages/64/b4/17d4b0b2a2dc85a6df63d1157e028ed19f90d4cd97c36717afef2bc2f395/attrs-26.1.0-py3-none-any.whl
       - pypi: git+https://github.com/JarningGau/darlinpy#3a1d368b316e35f35f4bf73fc59098fef2da2057
-      - pypi: https://files.pythonhosted.org/packages/88/96/50a2c640e5c3a161a09235a262234792d01317fab466af64ad05180389db/fuzzysearch-0.8.1-cp311-cp311-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/09/7d/af933f0f6e0767995b4e2d705a0665e454d1c19402aa7e895de3951ebb04/scipy-1.17.1-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/16/e1/3079a9ff9b8e11b846c6ac5c8b5bfb7ff225eee721825310c91b3b50304f/tqdm-4.67.3-py3-none-any.whl
 packages:
@@ -125,11 +125,16 @@ packages:
   license_family: BSD
   size: 28948
   timestamp: 1770939786096
-- pypi: https://files.pythonhosted.org/packages/64/b4/17d4b0b2a2dc85a6df63d1157e028ed19f90d4cd97c36717afef2bc2f395/attrs-26.1.0-py3-none-any.whl
-  name: attrs
-  version: 26.1.0
-  sha256: c647aa4a12dfbad9333ca4e71fe62ddc36f4e63b2d260a37a8b83d2f043ac309
-  requires_python: '>=3.9'
+- conda: https://mirrors.westlake.edu.cn/ANACONDA/cloud/conda-forge/noarch/attrs-26.1.0-pyhcf101f3_0.conda
+  sha256: 1b6124230bb4e571b1b9401537ecff575b7b109cc3a21ee019f65e083b8399ab
+  md5: c6b0543676ecb1fb2d7643941fe375f2
+  depends:
+  - python >=3.10
+  - python
+  license: MIT
+  license_family: MIT
+  size: 64927
+  timestamp: 1773935801332
 - conda: https://mirrors.westlake.edu.cn/ANACONDA/cloud/conda-forge/linux-64/biopython-1.86-py311h49ec1c0_1.conda
   sha256: c461066d6ef614dd63b9ed1fadd8f1b8a1e28bd65f8e4e7ce86070cf1837fadd
   md5: ea5aff712c3de88808aeed8eead19bab
@@ -307,12 +312,22 @@ packages:
   - pkg:pypi/future?source=hash-mapping
   size: 364561
   timestamp: 1738926525117
-- pypi: https://files.pythonhosted.org/packages/88/96/50a2c640e5c3a161a09235a262234792d01317fab466af64ad05180389db/fuzzysearch-0.8.1-cp311-cp311-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl
-  name: fuzzysearch
-  version: 0.8.1
-  sha256: 066c3dafa48b3967f7d4a343c0a7ea081af9edafb99f2915a80d33a9b0a4bfc9
-  requires_dist:
-  - attrs>=19.3
+- conda: https://mirrors.westlake.edu.cn/ANACONDA/cloud/conda-forge/linux-64/fuzzysearch-0.8.1-py311h1ddb823_0.conda
+  sha256: 117660469b2bf9f55c5381ed097dd94da49e8195f03aaef7e3aed93e7cf6c508
+  md5: 7a9ecd1cdc59c8e96076e436c3363c3e
+  depends:
+  - __glibc >=2.17,<3.0.a0
+  - attrs >=19.3
+  - libgcc >=14
+  - libstdcxx >=14
+  - python >=3.11,<3.12.0a0
+  - python_abi 3.11.* *_cp311
+  license: MIT
+  license_family: MIT
+  purls:
+  - pkg:pypi/fuzzysearch?source=hash-mapping
+  size: 54299
+  timestamp: 1762901275882
 - conda: https://mirrors.westlake.edu.cn/ANACONDA/cloud/conda-forge/linux-64/icu-78.2-h33c6efd_0.conda
   sha256: 142a722072fa96cf16ff98eaaf641f54ab84744af81754c292cb81e0881c0329
   md5: 186a18e3ba246eccfc7cff00cd19a870
@@ -1053,6 +1068,8 @@ packages:
   - python
   license: MIT
   license_family: MIT
+  purls:
+  - pkg:pypi/pluggy?source=hash-mapping
   size: 25877
   timestamp: 1764896838868
 - conda: https://mirrors.westlake.edu.cn/ANACONDA/cloud/conda-forge/linux-64/pthread-stubs-0.4-hb9d3cd8_1002.conda

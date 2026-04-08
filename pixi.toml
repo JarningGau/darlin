@@ -3,7 +3,6 @@ authors = ["JarningGau <jarninggau@gmail.com>"]
 channels = ["https://mirrors.westlake.edu.cn/ANACONDA/cloud/conda-forge", "https://mirrors.westlake.edu.cn/ANACONDA/cloud/bioconda"]
 name = "darlin"
 platforms = ["linux-64"]
-version = "0.1.0"
 
 [tasks]
 smoke = "PYTHONPATH=src python -m darlin.cli --help && PYTHONPATH=src python -m darlin.cli bulk --help && PYTHONPATH=src python -m darlin.cli bulk run --help"
@@ -19,6 +18,7 @@ pandas = "*"
 tqdm = "*"
 biopython = "*"
 umi_tools = "*"
+fuzzysearch = "*"
 pip = "*"
 
 [pypi-dependencies]

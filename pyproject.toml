@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "darlin"
-version = "0.1.0"
+dynamic = ["version"]
 description = "DARLIN: unified CLI for bulk DNA/RNA, single-cell RNA-seq, and single-cell multi-modal datasets."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -24,3 +24,6 @@ package-dir = { "" = "src" }
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.dynamic]
+version = { attr = "darlin.__version__" }
