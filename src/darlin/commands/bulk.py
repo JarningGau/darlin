@@ -41,6 +41,7 @@ def _add_bulk_run(steps: argparse._SubParsersAction) -> None:
     p.add_argument("--umi-ld", type=int, nargs="+", default=[1], help="List of UMI clustering thresholds")
     p.add_argument("--lb-hd-relative", type=float, nargs="+", default=[0.01], help="List of relative barcode HD thresholds")
     p.add_argument("--log-level", type=str, default="INFO", choices=["DEBUG", "INFO", "WARNING", "ERROR"], help="Logging level")
+    p.add_argument("--no-progress", action="store_true", help="Disable tqdm progress bars (cleaner logs for batch/CI)")
     p.add_argument("--test", action="store_true", help="Test mode: only process first ~2500 reads")
     p.add_argument("--sample-n", type=int, default=None, help="Sample first N reads")
     p.set_defaults(func=_bulk_run)
@@ -64,6 +65,7 @@ def _add_bulk_extract(steps: argparse._SubParsersAction) -> None:
     )
     p.add_argument("--skip-pear", action="store_true", help="Skip PEAR assembly (requires assembled FASTQ to exist)")
     p.add_argument("--log-level", type=str, default="INFO", choices=["DEBUG", "INFO", "WARNING", "ERROR"], help="Logging level")
+    p.add_argument("--no-progress", action="store_true", help="Disable tqdm progress bars (cleaner logs for batch/CI)")
     p.add_argument("--test", action="store_true", help="Test mode: only process first ~2500 reads")
     p.add_argument("--sample-n", type=int, default=None, help="Sample first N reads")
     p.set_defaults(func=_bulk_extract)
@@ -95,6 +97,7 @@ def _add_bulk_denoise(steps: argparse._SubParsersAction) -> None:
     p.add_argument("--umi-ld", type=int, default=1, help="UMI clustering threshold")
     p.add_argument("--lb-hd-relative", type=float, default=0.01, help="Relative barcode HD threshold")
     p.add_argument("--log-level", type=str, default="INFO", choices=["DEBUG", "INFO", "WARNING", "ERROR"], help="Logging level")
+    p.add_argument("--no-progress", action="store_true", help="Disable tqdm progress bars (cleaner logs for batch/CI)")
     p.set_defaults(func=_bulk_denoise)
 
 
@@ -195,6 +198,7 @@ def _bulk_run(args: argparse.Namespace) -> int:
         log_level=args.log_level,
         test=bool(args.test),
         sample_n=args.sample_n,
+        show_progress=not bool(args.no_progress),
     )
 
 
@@ -253,6 +257,7 @@ def _bulk_extract(args: argparse.Namespace) -> int:
         paths=paths,
         max_reads=max_reads,
         logger=logger,
+        show_progress=not bool(args.no_progress),
     )
     return 0
 
@@ -306,6 +311,7 @@ def _bulk_denoise(args: argparse.Namespace) -> int:
         lb_hd_relative=args.lb_hd_relative,
         paths=paths,
         logger=logger,
+        show_progress=not bool(args.no_progress),
     )
     return 0
 

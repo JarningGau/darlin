@@ -35,6 +35,7 @@ darlin bulk run \
 | `--pear-path` | `pear` | Path to the PEAR executable. |
 | `--threads` | `8` | Number of threads used during paired-end assembly. |
 | `--log-level` | `INFO` | Logging verbosity. Accepted values are `DEBUG`, `INFO`, `WARNING`, and `ERROR`. |
+| `--no-progress` | off | Disable tqdm progress bars during extract/denoise (cleaner logs in batch or CI). |
 
 ### Extraction and Filtering Arguments
 
@@ -132,6 +133,7 @@ darlin bulk finalize \
 
 ## Subcommand Notes
 
+- `darlin bulk extract` and `darlin bulk denoise` accept `--no-progress` (same behavior as `bulk run`).
 - `darlin bulk pear` assembles paired-end reads and writes `pear/pear.assembled.fastq`.
 - `darlin bulk extract` can consume the default assembled FASTQ or an explicit `--assembled-fq` path.
 - `darlin bulk filter` can consume the default `extracted.tsv` or an explicit `--extracted` path (length filter and aggregation only; no `--reads-cutoff`).

@@ -24,15 +24,7 @@ fq2="${ROOT_DIR}/tests/data/bulkdna/L141_CA_R2.fq.gz"
 sample_id="L141_CA"
 
 tmp_out="temp"
-
 outdir="${tmp_out}/out"
-
-echo "==> Running bulk DNA pipeline"
-echo "    sample_id: ${sample_id}"
-echo "    fq1:       ${fq1}"
-echo "    fq2:       ${fq2}"
-echo "    outdir:    ${outdir}"
-echo
 
 python -m darlin.cli bulk run \
   --sample-id "${sample_id}" \
@@ -41,50 +33,7 @@ python -m darlin.cli bulk run \
   --output-dir "${outdir}" \
   --threads 1 \
   --keep-pear \
+  --locus Col1a1 \
+  --umi-ld 1 2  \
+  --lb-hd-relative 0.01 0.02 \
   --sample-n 200
-
-sample_dir="${outdir}/${sample_id}"
-combo_dir="${sample_dir}/reads_1_u_1_l_0.01"
-
-expect_file() {
-  local p="$1"
-  if [[ ! -f "${p}" ]]; then
-    echo "ERROR: expected output missing: ${p}" >&2
-    exit 1
-  fi
-}
-
-echo
-echo "==> Checking expected outputs exist"
-expect_file "${sample_dir}/run.log"
-expect_file "${sample_dir}/pear/pear.assembled.fastq"
-expect_file "${sample_dir}/extracted.tsv"
-expect_file "${sample_dir}/filtered.tsv"
-expect_file "${combo_dir}/denoised_barcodes.tsv"
-expect_file "${combo_dir}/annotated.tsv"
-
-alleles_tsv="${combo_dir}/alleles_by_umis.tsv"
-expect_file "${alleles_tsv}"
-
-echo "==> Checking alleles TSV contains required headers"
-ALLELES_TSV="${alleles_tsv}" python - <<'PY'
-import csv
-import os
-import sys
-
-alleles_tsv = os.environ["ALLELES_TSV"]
-with open(alleles_tsv, newline="") as f:
-    reader = csv.DictReader(f, delimiter="\t")
-    if reader.fieldnames is None:
-        print("ERROR: TSV has no header row", file=sys.stderr)
-        sys.exit(1)
-    for name in ("md5", "UMIs"):
-        if name not in reader.fieldnames:
-            print(f"ERROR: missing required column {name!r} in {reader.fieldnames!r}", file=sys.stderr)
-            sys.exit(1)
-print("OK: TSV headers include 'md5' and 'UMIs'")
-PY
-
-echo
-echo "OK: bulk DNA CLI run produced expected outputs"
-echo "Output directory was: ${outdir}"

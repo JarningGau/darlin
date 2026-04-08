@@ -28,3 +28,9 @@ def test_bulk_help_mentions_steps() -> None:
     for step in ["run", "pear", "extract", "filter", "denoise", "annotate", "finalize"]:
         assert step in r.stdout
 
+
+def test_bulk_run_help_mentions_no_progress() -> None:
+    r = _run("bulk", "run", "--help")
+    assert r.returncode == 0
+    assert "--no-progress" in r.stdout
+

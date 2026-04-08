@@ -32,6 +32,7 @@ def step_pear(
         pear_path=pear_path,
         threads=threads,
         logger=logger,
+        log_path_bases=(Path.cwd(), paths.sample_dir),
     )
     if not paths.assembled_fastq.exists():
         raise FileNotFoundError(f"PEAR assembled FASTQ not found: {paths.assembled_fastq}")
@@ -47,6 +48,7 @@ def step_extract(
     paths: BulkPaths,
     max_reads: int | None,
     logger: logging.Logger,
+    show_progress: bool = True,
 ) -> Path:
     import pandas as pd  # type: ignore
     from tqdm import tqdm  # type: ignore
@@ -60,18 +62,22 @@ def step_extract(
 
     results: list[tuple[str, str]] = []
     read_count = 0
+    skipped_umi_n = 0
+    skipped_no_dual_match = 0
     with open_fastq_text(str(assembled_fastq)) as fq_handle:
         for (_read_id, seq, _qual) in tqdm(
             iter_fastq_raw(fq_handle),
             desc="Processing reads",
             unit_scale=True,
             unit=" reads",
+            disable=not show_progress,
         ):
             if max_reads is not None and read_count >= max_reads:
                 break
             read_count += 1
             umi = seq[:umi_len]
             if "N" in umi:
+                skipped_umi_n += 1
                 continue
             match_result = find_all_matches(seq, p3_seq, p5_seq, p3_mm, p5_mm)
             if len(match_result.p3_matches) == 1 and len(match_result.p5_matches) == 1:
@@ -79,6 +85,8 @@ def step_extract(
                 e = match_result.p5_matches[0].start
                 lineage_bc = seq[s:e]
                 results.append((lineage_bc, umi))
+            else:
+                skipped_no_dual_match += 1
 
     df = pd.DataFrame(results, columns=["LB", "UB"])
     df["LB_len"] = df["LB"].str.len()
@@ -86,7 +94,14 @@ def step_extract(
     paths.sample_dir.mkdir(parents=True, exist_ok=True)
     out_tsv = paths.extracted_tsv
     df.to_csv(out_tsv, sep="\t", index=False)
-    logger.info(f"Extracted table saved to: {out_tsv}")
+    logger.info(
+        "Extract: reads_scanned=%s rows_written=%s skipped_umi_with_N=%s skipped_no_unique_primer_pair=%s -> %s",
+        read_count,
+        len(results),
+        skipped_umi_n,
+        skipped_no_dual_match,
+        out_tsv,
+    )
     return out_tsv
 
 
@@ -113,7 +128,9 @@ def step_filter(
 
     out_tsv = paths.filtered_tsv
     df.to_csv(out_tsv, sep="\t", index=False)
-    logger.info(f"Filtered table saved to: {out_tsv}")
+    n_rows = len(df)
+    sum_reads = int(df["reads"].sum()) if n_rows > 0 else 0
+    logger.info("Filter: aggregated_rows=%s sum_reads=%s -> %s", n_rows, sum_reads, out_tsv)
     return out_tsv
 
 
@@ -126,6 +143,7 @@ def step_denoise(
     lb_hd_relative: float,
     paths: BulkPaths,
     logger: logging.Logger,
+    show_progress: bool = True,
 ) -> tuple[Path, Path]:
     import pandas as pd  # type: ignore
 
@@ -153,9 +171,8 @@ def step_denoise(
         umi_ld=int(umi_ld),
         lb_hd_relative=float(lb_hd_relative),
         logger=logger,
+        show_progress=show_progress,
     )
-    logger.info(f"Denoising stats (umi_ld={umi_ld}, lb_hd_relative={lb_hd_relative}): {stats}")
-
     combo_dir = paths.combo_dir(reads_cutoff=int(reads_cutoff), umi_ld=umi_ld, lb_hd_relative=lb_hd_relative)
     combo_dir.mkdir(parents=True, exist_ok=True)
 
@@ -170,7 +187,19 @@ def step_denoise(
     out_bc = combo_dir / "denoised_barcodes.tsv"
     agg2.to_csv(out_bc, sep="\t", index=False)
 
-    logger.info(f"Denoised outputs saved to: {out_agg} and {out_bc}")
+    logger.info(
+        "Denoise: umi_ld=%s lb_hd_relative=%s n_input_rows=%s "
+        "pairs_before=%s pairs_after=%s umi_merges=%s barcode_merges=%s "
+        "-> %s",
+        umi_ld,
+        lb_hd_relative,
+        stats["n_input_rows"],
+        stats["n_unique_pairs_before"],
+        stats["n_unique_pairs_after"],
+        stats["umi_merges"],
+        stats["barcode_merges"],
+        out_bc,
+    )
     return out_agg, out_bc
 
 
@@ -203,6 +232,7 @@ def step_annotate(
     else:
         sequences_rc = agg2["query"].astype(str).tolist()
 
+    n_queries = len(sequences_rc)
     results_allele = analyze_sequences(
         sequences_rc,
         config=locus,
@@ -214,7 +244,7 @@ def step_annotate(
     combo_dir.mkdir(parents=True, exist_ok=True)
     out_tsv = combo_dir / "annotated.tsv"
     results_allele.to_csv(out_tsv, sep="\t", index=False)
-    logger.info(f"Annotation results saved to: {out_tsv}")
+    logger.info("Annotation: analyzed_queries=%s rows_out=%s -> %s", n_queries, len(results_allele), out_tsv)
     return out_tsv
 
 

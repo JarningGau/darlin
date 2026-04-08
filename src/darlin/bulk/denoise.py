@@ -88,6 +88,7 @@ def correct_lineage_and_umi(
     umi_ld: int = 2,
     lb_hd_relative: float = 0.01,
     logger=None,
+    show_progress: bool = True,
 ):
     import pandas as pd  # type: ignore
     from tqdm import tqdm  # type: ignore
@@ -107,13 +108,15 @@ def correct_lineage_and_umi(
     clusterer = UMIClusterer(cluster_method="directional")
 
     for i in range(n_iter):
-        logger.info(f"Iteration {i+1}/{n_iter}")
+        if n_iter > 1:
+            logger.info(f"Iteration {i+1}/{n_iter}")
         out["__bc_len__"] = out["LR"].str.len().astype(int)
         bc_parent_total = {}
         for blen, sub in tqdm(
             out.groupby(["__bc_len__"]),
             desc="Collapsing barcodes (length-aware HD global)",
             leave=True,
+            disable=not show_progress,
         ):
             cnt = Counter(dict(sub.groupby("LR")[count_col].sum()))
             if isinstance(blen, (tuple, list)):
@@ -134,6 +137,7 @@ def correct_lineage_and_umi(
             out.groupby("LR"),
             desc="Collapsing UMIs with umi_tools",
             leave=True,
+            disable=not show_progress,
         ):
             _ = bc_val
             cnt_series = sub.groupby("UR")[count_col].sum()

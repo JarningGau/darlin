@@ -66,6 +66,16 @@ def test_cli_bulk_dna_run_produces_outputs(tmp_path: Path) -> None:
         assert "md5" in reader.fieldnames
         assert "UMIs" in reader.fieldnames
 
+    log_text = log_file.read_text()
+    assert "Starting bulk pipeline for sample: L141_CA" in log_text
+    assert "Extract: reads_scanned=" in log_text and "rows_written=" in log_text
+    assert "Filter: aggregated_rows=" in log_text and "sum_reads=" in log_text
+    assert "] Denoise" in log_text
+    assert "Denoise: umi_ld=" in log_text and "barcode_merges=" in log_text
+    assert "Annotation: analyzed_queries=" in log_text
+    assert "Timing summary" in log_text
+    assert "Pipeline completed in" in log_text
+
 
 def test_cli_bulk_run_missing_fq1_exits_cleanly(tmp_path: Path) -> None:
     fq2 = Path("tests/data/bulkdna/L141_CA_R2.fq.gz")

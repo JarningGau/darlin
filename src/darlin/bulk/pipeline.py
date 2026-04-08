@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import logging
+import time
 from pathlib import Path
-
 from darlin.bulk.logging import setup_logging
 from darlin.bulk.paths import get_bulk_paths
 from darlin.bulk.steps import (
@@ -13,6 +13,34 @@ from darlin.bulk.steps import (
     step_finalize,
     step_pear,
 )
+
+
+class _StepTimer:
+    """Accumulates per-step wall-clock times for a final summary."""
+
+    def __init__(self, logger: logging.Logger) -> None:
+        self._logger = logger
+        self._records: list[tuple[str, float]] = []
+        self._current: tuple[str, float] | None = None
+        self._step_idx = 0
+        self.total_steps = 0
+
+    def start(self, name: str) -> None:
+        self._finish_current()
+        self._step_idx += 1
+        label = f"[{self._step_idx}/{self.total_steps}]" if self.total_steps else f"[{self._step_idx}]"
+        self._logger.info("%s %s", label, name)
+        self._current = (name, time.perf_counter())
+
+    def _finish_current(self) -> None:
+        if self._current is not None:
+            name, t0 = self._current
+            self._records.append((name, time.perf_counter() - t0))
+            self._current = None
+
+    def summary(self) -> list[tuple[str, float]]:
+        self._finish_current()
+        return list(self._records)
 
 
 def resolve_bulk_primers(*, locus: str) -> tuple[int, str, str]:
@@ -27,6 +55,104 @@ def resolve_bulk_primers(*, locus: str) -> tuple[int, str, str]:
     p3_rc = str(Seq(p3_seq).reverse_complement())
     p5_rc = str(Seq(p5_seq).reverse_complement())
     return unedited_bc_len, p3_rc, p5_rc
+
+
+def _fmt_size(path: Path) -> str:
+    """Human-readable file size, or '?' if the file is missing."""
+    try:
+        n = path.stat().st_size
+    except OSError:
+        return "?"
+    for unit in ("B", "KB", "MB", "GB"):
+        if n < 1024:
+            return f"{n:.1f} {unit}" if unit != "B" else f"{n} {unit}"
+        n /= 1024
+    return f"{n:.1f} TB"
+
+
+def _build_replay_cmd(
+    *,
+    sample_id: str,
+    fq1: str,
+    fq2: str,
+    output_dir: str,
+    locus: str,
+    umi_len: int,
+    min_bc_len: int,
+    reads_cutoff: int,
+    pear_path: str,
+    threads: int,
+    log_level: str,
+    skip_pear: bool,
+    keep_pear: bool,
+    test: bool,
+    sample_n: int | None,
+    umi_ld_list: list[int],
+    lb_hd_relative_list: list[float],
+    show_progress: bool,
+) -> str:
+    parts: list[str] = [
+        "darlin", "bulk", "run",
+        "--sample-id", sample_id,
+        "--fq1", fq1,
+        "--fq2", fq2,
+        "--output-dir", str(output_dir),
+        "--locus", locus,
+        "--umi-len", str(umi_len),
+        "--min-bc-len", str(min_bc_len),
+        "--reads-cutoff", str(reads_cutoff),
+        "--pear-path", pear_path,
+        "--threads", str(threads),
+        "--log-level", log_level,
+    ]
+    if skip_pear:
+        parts.append("--skip-pear")
+    if keep_pear:
+        parts.append("--keep-pear")
+    if test:
+        parts.append("--test")
+    if sample_n is not None:
+        parts.extend(["--sample-n", str(sample_n)])
+    for v in umi_ld_list:
+        parts.extend(["--umi-ld", str(v)])
+    for v in lb_hd_relative_list:
+        parts.extend(["--lb-hd-relative", str(v)])
+    if not show_progress:
+        parts.append("--no-progress")
+    return " ".join(parts)
+
+
+def _count_steps(skip_pear: bool, n_combos: int) -> int:
+    """Return the total number of pipeline steps for progress labels."""
+    # PEAR + Extract + Filter + (Denoise + Annotate + Finalize) * n_combos
+    return (0 if skip_pear else 1) + 2 + 3 * n_combos
+
+
+def _log_timing_summary(logger: logging.Logger, records: list[tuple[str, float]]) -> None:
+    total = sum(t for _, t in records)
+    logger.info("--- Timing summary ---")
+    for name, secs in records:
+        pct = secs / total * 100 if total > 0 else 0
+        logger.info("  %-20s %7.1fs  (%5.1f%%)", name, secs, pct)
+    logger.info("  %-20s %7.1fs", "Total", total)
+
+
+def _log_result_summary(
+    logger: logging.Logger,
+    combo_allele_paths: list[Path],
+    elapsed: float,
+) -> None:
+    import pandas as pd  # type: ignore
+
+    logger.info("================================")
+    logger.info("Pipeline completed in %.1fs", elapsed)
+    for p in combo_allele_paths:
+        if p.exists():
+            df = pd.read_csv(p, sep="\t")
+            n_alleles = len(df)
+            total_umis = int(df["UMIs"].sum()) if "UMIs" in df.columns else 0
+            logger.info("  Unique alleles: %s | Total UMIs: %s | %s", n_alleles, total_umis, p)
+    logger.info("================================")
 
 
 def run_bulk_pipeline(
@@ -49,6 +175,7 @@ def run_bulk_pipeline(
     log_level: str = "INFO",
     test: bool = False,
     sample_n: int | None = None,
+    show_progress: bool = True,
 ) -> int:
     paths = get_bulk_paths(output_dir=output_dir, sample_id=sample_id)
     paths.sample_dir.mkdir(parents=True, exist_ok=True)
@@ -56,21 +183,44 @@ def run_bulk_pipeline(
 
     level = getattr(logging, log_level.upper(), logging.INFO)
     logger = setup_logging(paths.log_file, level)
-
-    logger.info("--------------------------------")
-    logger.info(f"Starting bulk pipeline for sample: {sample_id}")
-    logger.info(f"Output directory: {paths.sample_dir}")
-    logger.info("--------------------------------")
+    t0 = time.perf_counter()
 
     if not umi_ld_list:
         umi_ld_list = [1]
     if not lb_hd_relative_list:
         lb_hd_relative_list = [0.01]
 
+    max_reads_effective = sample_n if sample_n is not None else (2500 if test else None)
+
+    n_combos = len(umi_ld_list) * len(lb_hd_relative_list)
+    timer = _StepTimer(logger)
+    timer.total_steps = _count_steps(skip_pear=skip_pear, n_combos=n_combos)
+
+    replay_cmd = _build_replay_cmd(
+        sample_id=sample_id, fq1=fq1, fq2=fq2, output_dir=output_dir,
+        locus=locus, umi_len=umi_len, min_bc_len=min_bc_len,
+        reads_cutoff=reads_cutoff, pear_path=pear_path, threads=threads,
+        log_level=log_level, skip_pear=skip_pear, keep_pear=keep_pear,
+        test=test, sample_n=sample_n, umi_ld_list=umi_ld_list,
+        lb_hd_relative_list=lb_hd_relative_list, show_progress=show_progress,
+    )
+
+    logger.info("--------------------------------")
+    logger.info("Starting bulk pipeline for sample: %s", sample_id)
+    logger.info("  Input R1: %s (%s)", Path(fq1).name, _fmt_size(Path(fq1)))
+    logger.info("  Input R2: %s (%s)", Path(fq2).name, _fmt_size(Path(fq2)))
+    logger.info("  Output:   %s", paths.sample_dir)
+    logger.info("  Locus:    %s", locus)
+    logger.info("  Threads:  %s", threads)
+    if max_reads_effective is not None:
+        logger.info("  Max reads: %s (capped)", max_reads_effective)
+    logger.debug("Run command (replay): %s", replay_cmd)
+    logger.info("--------------------------------")
+
     _unedited_bc_len, p3_rc, p5_rc = resolve_bulk_primers(locus=locus)
 
     if not skip_pear:
-        logger.info("#### Step: PEAR")
+        timer.start("PEAR")
         assembled = step_pear(
             fq1=fq1,
             fq2=fq2,
@@ -81,12 +231,12 @@ def run_bulk_pipeline(
         )
     else:
         assembled = paths.assembled_fastq
-        logger.info("#### Step: PEAR (skipped)")
+        logger.info("PEAR (skipped)")
         if not assembled.exists():
             raise FileNotFoundError(f"Assembled FASTQ file not found: {assembled}")
 
-    max_reads = sample_n if sample_n is not None else (2500 if test else None)
-    logger.info("#### Step: Extract")
+    max_reads = max_reads_effective
+    timer.start("Extract")
     extracted_tsv = step_extract(
         assembled_fastq=assembled,
         umi_len=umi_len,
@@ -95,9 +245,10 @@ def run_bulk_pipeline(
         paths=paths,
         max_reads=max_reads,
         logger=logger,
+        show_progress=show_progress,
     )
 
-    logger.info("#### Step: Filter")
+    timer.start("Filter")
     filtered_tsv = step_filter(
         extracted_tsv=extracted_tsv,
         min_bc_len=min_bc_len,
@@ -105,17 +256,16 @@ def run_bulk_pipeline(
         logger=logger,
     )
 
-    # For now, we keep the original behavior: loop over parameter combinations and
-    # write final alleles per-combo.
+    combo_allele_paths: list[Path] = []
     for umi_ld in umi_ld_list:
         for lb_rel in lb_hd_relative_list:
             combo_dir = paths.combo_dir(reads_cutoff=reads_cutoff, umi_ld=umi_ld, lb_hd_relative=lb_rel)
             combo_dir.mkdir(parents=True, exist_ok=True)
 
-            # Denoise step currently writes into combo_dir; annotate/finalize consume those outputs.
             from darlin.bulk.steps import step_denoise  # lazy import
 
-            logger.info(f"#### Combo: reads_cutoff={reads_cutoff}, umi_ld={umi_ld}, lb_hd_relative={lb_rel}")
+            combo_label = f"reads_cutoff={reads_cutoff}, umi_ld={umi_ld}, lb_hd_relative={lb_rel}"
+            timer.start(f"Denoise ({combo_label})")
             _denoised_agg_tsv, denoised_barcodes_tsv = step_denoise(
                 filtered_tsv=filtered_tsv,
                 reads_cutoff=reads_cutoff,
@@ -124,9 +274,10 @@ def run_bulk_pipeline(
                 lb_hd_relative=lb_rel,
                 paths=paths,
                 logger=logger,
+                show_progress=show_progress,
             )
 
-            logger.info("#### Step: Annotate")
+            timer.start("Annotate")
             annotated_tsv = step_annotate(
                 denoised_barcodes_tsv=denoised_barcodes_tsv,
                 locus=locus,
@@ -138,8 +289,8 @@ def run_bulk_pipeline(
                 logger=logger,
             )
 
-            logger.info("#### Step: Finalize")
-            _alleles_tsv = step_finalize(
+            timer.start("Finalize")
+            alleles_tsv = step_finalize(
                 denoised_barcodes_tsv=denoised_barcodes_tsv,
                 annotated_tsv=annotated_tsv,
                 sample_id=sample_id,
@@ -149,8 +300,12 @@ def run_bulk_pipeline(
                 lb_hd_relative=lb_rel,
                 logger=logger,
             )
+            combo_allele_paths.append(alleles_tsv)
 
     step_cleanup_pear(paths=paths, keep_pear=keep_pear, logger=logger)
-    logger.info("Processing completed successfully!")
+    elapsed = time.perf_counter() - t0
+
+    _log_timing_summary(logger, timer.summary())
+    _log_result_summary(logger, combo_allele_paths, elapsed)
     return 0
 
