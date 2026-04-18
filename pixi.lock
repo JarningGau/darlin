@@ -570,6 +570,7 @@ packages:
   depends:
   - libfreetype6 >=2.14.2
   license: GPL-2.0-only OR FTL
+  purls: []
   size: 8035
   timestamp: 1772757210108
 - conda: https://mirrors.westlake.edu.cn/ANACONDA/cloud/conda-forge/linux-64/libfreetype6-2.14.2-h73754d4_0.conda
@@ -727,6 +728,7 @@ packages:
   - __glibc >=2.17,<3.0.a0
   - libzlib >=1.3.1,<2.0a0
   license: zlib-acknowledgement
+  purls: []
   size: 317669
   timestamp: 1770691470744
 - conda: https://mirrors.westlake.edu.cn/ANACONDA/cloud/conda-forge/linux-64/libsqlite-3.52.0-hf4e2dac_0.conda
@@ -800,6 +802,7 @@ packages:
   - libgcc >=14
   license: BSD-3-Clause
   license_family: BSD
+  purls: []
   size: 40311
   timestamp: 1766271528534
 - conda: https://mirrors.westlake.edu.cn/ANACONDA/cloud/conda-forge/linux-64/libwebp-base-1.6.0-hd42ef1d_0.conda
@@ -946,6 +949,7 @@ packages:
   - libgcc >=14
   license: Apache-2.0
   license_family: Apache
+  purls: []
   size: 3164551
   timestamp: 1769555830639
 - conda: https://mirrors.westlake.edu.cn/ANACONDA/cloud/conda-forge/noarch/packaging-26.0-pyhcf101f3_0.conda
@@ -1309,6 +1313,8 @@ packages:
   - python >=3.10
   license: MIT
   license_family: MIT
+  purls:
+  - pkg:pypi/setuptools?source=hash-mapping
   size: 639697
   timestamp: 1773074868565
 - conda: https://mirrors.westlake.edu.cn/ANACONDA/cloud/conda-forge/noarch/six-1.17.0-pyhe01879c_1.conda
@@ -1391,6 +1397,7 @@ packages:
   sha256: 1d30098909076af33a35017eed6f2953af1c769e273a0626a04722ac4acaba3c
   md5: ad659d0a2b3e47e38d829aa8cad2d610
   license: LicenseRef-Public-Domain
+  purls: []
   size: 119135
   timestamp: 1767016325805
 - conda: https://mirrors.westlake.edu.cn/ANACONDA/cloud/bioconda/linux-64/umi_tools-1.1.6-py311haab0aaa_0.tar.bz2

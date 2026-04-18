@@ -28,7 +28,7 @@ Primary subcommands:
 
 For bulk datasets, the standard entrypoint is `darlin bulk run`, which executes the complete workflow:
 
-`pear -> extract -> filter -> denoise -> annotate -> finalize`
+`pear -> extract -> filter -> denoise -> annotate`
 
 ```bash
 darlin bulk run \

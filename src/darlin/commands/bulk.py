@@ -35,7 +35,6 @@ def add_bulk_command(subparsers: argparse._SubParsersAction) -> None:
     _add_bulk_filter(steps)
     _add_bulk_denoise(steps)
     _add_bulk_annotate(steps)
-    _add_bulk_finalize(steps)
 
 
 def _bulk_main(_: argparse.Namespace) -> int:
@@ -84,7 +83,7 @@ def _add_bulk_extract(steps: argparse._SubParsersAction) -> None:
 
 def _add_bulk_filter(steps: argparse._SubParsersAction) -> None:
     p = steps.add_parser("filter", help="Filter/aggregate extracted reads")
-    _add_common_bulk_args(p, include_fqs=False, include_reads_cutoff=False)
+    _add_common_bulk_args(p, include_fqs=False, include_reads_cutoff=True)
     p.add_argument(
         "--extracted",
         type=str,
@@ -113,7 +112,10 @@ def _add_bulk_denoise(steps: argparse._SubParsersAction) -> None:
 
 
 def _add_bulk_annotate(steps: argparse._SubParsersAction) -> None:
-    p = steps.add_parser("annotate", help="Annotate alleles using darlinpy")
+    p = steps.add_parser(
+        "annotate",
+        help="Annotate alleles (darlinpy) and write alleles_by_umis.tsv",
+    )
     _add_common_bulk_args(p, include_fqs=False)
     p.add_argument("--umi-ld", type=int, default=1, help="UMI clustering threshold (for output dir naming)")
     p.add_argument("--lb-hd-relative", type=float, default=0.01, help="Relative barcode HD threshold (for output dir naming)")
@@ -125,22 +127,6 @@ def _add_bulk_annotate(steps: argparse._SubParsersAction) -> None:
     )
     p.add_argument("--log-level", type=str, default="INFO", choices=["DEBUG", "INFO", "WARNING", "ERROR"], help="Logging level")
     p.set_defaults(func=_bulk_annotate)
-
-
-def _add_bulk_finalize(steps: argparse._SubParsersAction) -> None:
-    p = steps.add_parser("finalize", help="Finalize outputs (alleles_by_umis.tsv)")
-    _add_common_bulk_args(p, include_fqs=False)
-    p.add_argument("--umi-ld", type=int, default=1, help="UMI clustering threshold (for output dir naming)")
-    p.add_argument("--lb-hd-relative", type=float, default=0.01, help="Relative barcode HD threshold (for output dir naming)")
-    p.add_argument(
-        "--denoised-barcodes",
-        type=str,
-        required=True,
-        help="Path to denoised_barcodes.tsv (must include `query`, as from denoise or annotate)",
-    )
-    p.add_argument("--annotated", type=str, required=True, help="Path to annotated.tsv")
-    p.add_argument("--log-level", type=str, default="INFO", choices=["DEBUG", "INFO", "WARNING", "ERROR"], help="Logging level")
-    p.set_defaults(func=_bulk_finalize)
 
 
 def _add_common_bulk_args(
@@ -282,6 +268,8 @@ def _bulk_filter(args: argparse.Namespace) -> int:
     import logging
 
     from darlin.bulk.logging import setup_logging
+    from darlin.bulk.pipeline import resolve_bulk_primers
+    from darlin.bulk.plots import write_pre_denoise_plots
     from darlin.bulk.steps import step_filter
 
     paths = _get_bulk_paths_cli(args.output_dir, args.sample_id)
@@ -302,6 +290,15 @@ def _bulk_filter(args: argparse.Namespace) -> int:
         paths=paths,
         logger=logger,
     )
+    unedited_bc_len, _, _ = resolve_bulk_primers(locus=args.locus)
+    diag = paths.sample_dir / "diagnostics"
+    write_pre_denoise_plots(
+        filtered_tsv=paths.filtered_tsv,
+        out_dir=diag,
+        reads_cutoff=args.reads_cutoff,
+        unedited_bc_len=unedited_bc_len,
+        logger=logger,
+    )
     return 0
 
 
@@ -309,6 +306,8 @@ def _bulk_denoise(args: argparse.Namespace) -> int:
     import logging
 
     from darlin.bulk.logging import setup_logging
+    from darlin.bulk.pipeline import resolve_bulk_primers
+    from darlin.bulk.plots import write_post_denoise_plots, write_pre_denoise_plots
     from darlin.bulk.steps import step_denoise
 
     paths = _get_bulk_paths_cli(args.output_dir, args.sample_id)
@@ -330,6 +329,14 @@ def _bulk_denoise(args: argparse.Namespace) -> int:
     combo.ensure_dir()
 
     logger = setup_logging(paths.log_file, getattr(logging, args.log_level.upper(), logging.INFO))
+    unedited_bc_len, _, _ = resolve_bulk_primers(locus=args.locus)
+    write_pre_denoise_plots(
+        filtered_tsv=filtered,
+        out_dir=combo.dir,
+        reads_cutoff=args.reads_cutoff,
+        unedited_bc_len=unedited_bc_len,
+        logger=logger,
+    )
     step_denoise(
         filtered_tsv=filtered,
         reads_cutoff=args.reads_cutoff,
@@ -340,6 +347,12 @@ def _bulk_denoise(args: argparse.Namespace) -> int:
         logger=logger,
         show_progress=not bool(args.no_progress),
     )
+    write_post_denoise_plots(
+        denoised_agg_tsv=combo.denoised_agg_tsv,
+        out_dir=combo.dir,
+        unedited_bc_len=unedited_bc_len,
+        logger=logger,
+    )
     return 0
 
 
@@ -347,7 +360,9 @@ def _bulk_annotate(args: argparse.Namespace) -> int:
     import logging
 
     from darlin.bulk.logging import setup_logging
-    from darlin.bulk.steps import step_annotate
+    from darlin.bulk.pipeline import resolve_bulk_primers
+    from darlin.bulk.plots import write_post_denoise_plots, write_post_finalize_plots, write_pre_denoise_plots
+    from darlin.bulk.steps import step_annotate_and_finalize
 
     paths = _get_bulk_paths_cli(args.output_dir, args.sample_id)
     if paths is None:
@@ -367,50 +382,35 @@ def _bulk_annotate(args: argparse.Namespace) -> int:
     combo.ensure_dir()
 
     logger = setup_logging(paths.log_file, getattr(logging, args.log_level.upper(), logging.INFO))
-    step_annotate(
+    unedited_bc_len, _, _ = resolve_bulk_primers(locus=args.locus)
+    filtered = paths.filtered_tsv
+    if filtered.exists():
+        write_pre_denoise_plots(
+            filtered_tsv=filtered,
+            out_dir=combo.dir,
+            reads_cutoff=args.reads_cutoff,
+            unedited_bc_len=unedited_bc_len,
+            logger=logger,
+        )
+    if combo.denoised_agg_tsv.exists():
+        write_post_denoise_plots(
+            denoised_agg_tsv=combo.denoised_agg_tsv,
+            out_dir=combo.dir,
+            unedited_bc_len=unedited_bc_len,
+            logger=logger,
+        )
+    step_annotate_and_finalize(
         denoised_barcodes_tsv=args.denoised_barcodes,
         locus=args.locus,
         min_bc_len=args.min_bc_len,
+        sample_id=args.sample_id,
         combo=combo,
         logger=logger,
     )
-    return 0
-
-
-def _bulk_finalize(args: argparse.Namespace) -> int:
-    import logging
-
-    from darlin.bulk.logging import setup_logging
-    from darlin.bulk.steps import step_finalize
-
-    paths = _get_bulk_paths_cli(args.output_dir, args.sample_id)
-    if paths is None:
-        return 1
-    paths.ensure_dirs()
-    try:
-        require_readable_files(
-            [
-                ("Denoised barcodes (--denoised-barcodes)", args.denoised_barcodes),
-                ("Annotated TSV (--annotated)", args.annotated),
-            ]
-        )
-    except BulkInputError as e:
-        print(e, file=sys.stderr)
-        return 1
-
-    combo = paths.combo_paths(
-        reads_cutoff=args.reads_cutoff,
-        umi_ld=args.umi_ld,
-        lb_hd_relative=args.lb_hd_relative,
-    )
-    combo.ensure_dir()
-
-    logger = setup_logging(paths.log_file, getattr(logging, args.log_level.upper(), logging.INFO))
-    step_finalize(
-        denoised_barcodes_tsv=args.denoised_barcodes,
-        annotated_tsv=args.annotated,
-        sample_id=args.sample_id,
-        combo=combo,
+    write_post_finalize_plots(
+        alleles_tsv=combo.alleles_tsv,
+        out_dir=combo.dir,
+        unedited_bc_len=unedited_bc_len,
         logger=logger,
     )
     return 0

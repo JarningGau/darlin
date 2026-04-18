@@ -6,11 +6,10 @@ from pathlib import Path
 from darlin.bulk.logging import setup_logging
 from darlin.bulk.paths import get_bulk_paths
 from darlin.bulk.steps import (
-    step_annotate,
+    step_annotate_and_finalize,
     step_cleanup_pear,
     step_extract,
     step_filter,
-    step_finalize,
     step_pear,
 )
 
@@ -124,8 +123,8 @@ def _build_replay_cmd(
 
 def _count_steps(skip_pear: bool, n_combos: int) -> int:
     """Return the total number of pipeline steps for progress labels."""
-    # PEAR + Extract + Filter + (Denoise + Annotate + Finalize) * n_combos
-    return (0 if skip_pear else 1) + 2 + 3 * n_combos
+    # PEAR + Extract + Filter + (Denoise + Annotate) * n_combos
+    return (0 if skip_pear else 1) + 2 + 2 * n_combos
 
 
 def _log_timing_summary(logger: logging.Logger, records: list[tuple[str, float]]) -> None:
@@ -216,7 +215,7 @@ def run_bulk_pipeline(
     logger.debug("Run command (replay): %s", replay_cmd)
     logger.info("--------------------------------")
 
-    _unedited_bc_len, p3_rc, p5_rc = resolve_bulk_primers(locus=locus)
+    unedited_bc_len, p3_rc, p5_rc = resolve_bulk_primers(locus=locus)
 
     if not skip_pear:
         timer.start("PEAR")
@@ -261,10 +260,18 @@ def run_bulk_pipeline(
             combo = paths.combo_paths(reads_cutoff=reads_cutoff, umi_ld=umi_ld, lb_hd_relative=lb_rel)
             combo.ensure_dir()
 
+            from darlin.bulk.plots import write_post_denoise_plots, write_post_finalize_plots, write_pre_denoise_plots
             from darlin.bulk.steps import step_denoise  # lazy import
 
             combo_label = f"reads_cutoff={reads_cutoff}, umi_ld={umi_ld}, lb_hd_relative={lb_rel}"
             timer.start(f"Denoise ({combo_label})")
+            write_pre_denoise_plots(
+                filtered_tsv=filtered_tsv,
+                out_dir=combo.dir,
+                reads_cutoff=reads_cutoff,
+                unedited_bc_len=unedited_bc_len,
+                logger=logger,
+            )
             _denoised_agg_tsv, denoised_barcodes_tsv = step_denoise(
                 filtered_tsv=filtered_tsv,
                 reads_cutoff=reads_cutoff,
@@ -275,22 +282,26 @@ def run_bulk_pipeline(
                 logger=logger,
                 show_progress=show_progress,
             )
-
-            timer.start("Annotate")
-            annotated_tsv = step_annotate(
-                denoised_barcodes_tsv=denoised_barcodes_tsv,
-                locus=locus,
-                min_bc_len=min_bc_len,
-                combo=combo,
+            write_post_denoise_plots(
+                denoised_agg_tsv=combo.denoised_agg_tsv,
+                out_dir=combo.dir,
+                unedited_bc_len=unedited_bc_len,
                 logger=logger,
             )
 
-            timer.start("Finalize")
-            alleles_tsv = step_finalize(
+            timer.start("Annotate")
+            alleles_tsv = step_annotate_and_finalize(
                 denoised_barcodes_tsv=denoised_barcodes_tsv,
-                annotated_tsv=annotated_tsv,
+                locus=locus,
+                min_bc_len=min_bc_len,
                 sample_id=sample_id,
                 combo=combo,
+                logger=logger,
+            )
+            write_post_finalize_plots(
+                alleles_tsv=alleles_tsv,
+                out_dir=combo.dir,
+                unedited_bc_len=unedited_bc_len,
                 logger=logger,
             )
             combo_allele_paths.append(alleles_tsv)

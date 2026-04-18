@@ -24,7 +24,7 @@ def test_top_level_help_mentions_commands() -> None:
 def test_bulk_help_mentions_steps() -> None:
     r = _run("bulk", "--help")
     assert r.returncode == 0
-    for step in ["run", "pear", "extract", "filter", "denoise", "annotate", "finalize"]:
+    for step in ["run", "pear", "extract", "filter", "denoise", "annotate"]:
         assert step in r.stdout
 
 

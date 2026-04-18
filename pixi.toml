@@ -19,6 +19,7 @@ tqdm = "*"
 biopython = "*"
 umi_tools = "*"
 fuzzysearch = "*"
+matplotlib-base = "*"
 pip = "*"
 
 [pypi-dependencies]

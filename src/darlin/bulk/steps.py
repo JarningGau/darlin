@@ -238,6 +238,31 @@ def step_annotate(
     return combo.annotated_tsv
 
 
+def step_annotate_and_finalize(
+    *,
+    denoised_barcodes_tsv: str | Path,
+    locus: str,
+    min_bc_len: int,
+    sample_id: str,
+    combo: ComboPaths,
+    logger: logging.Logger,
+) -> Path:
+    annotated_tsv = step_annotate(
+        denoised_barcodes_tsv=denoised_barcodes_tsv,
+        locus=locus,
+        min_bc_len=min_bc_len,
+        combo=combo,
+        logger=logger,
+    )
+    return step_finalize(
+        denoised_barcodes_tsv=denoised_barcodes_tsv,
+        annotated_tsv=annotated_tsv,
+        sample_id=sample_id,
+        combo=combo,
+        logger=logger,
+    )
+
+
 def _concat_and_md5(aligned_query: str, aligned_ref: str) -> str:
     concat_str = str(aligned_query) + str(aligned_ref)
     return hashlib.md5(concat_str.encode("utf-8")).hexdigest()
