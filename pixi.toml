@@ -5,8 +5,6 @@ name = "darlin"
 platforms = ["linux-64"]
 
 [tasks]
-clone-darlinpy = "test -d darlinpy/.git || git clone https://github.com/jarninggau/darlinpy.git darlinpy"
-build-darlinpy = "cd darlinpy && python setup.py build_ext --inplace"
 smoke = "PYTHONPATH=src python -m darlin.cli --help && PYTHONPATH=src python -m darlin.cli bulk --help && PYTHONPATH=src python -m darlin.cli bulk run --help"
 install-cli = "python -m pip install -e ."
 compile = "python -m compileall src tests"
@@ -16,13 +14,14 @@ test = "pytest -q"
 python = "3.11.*"
 pytest = ">=9.0.2,<10"
 pear = ">=0.9.6,<0.10"
-pandas = "*"
-tqdm = "*"
-biopython = "*"
-umi_tools = "*"
-fuzzysearch = "*"
-matplotlib-base = "*"
-pip = "*"
+pandas = "<3.0.0"
+tqdm = ">=4.67.3,<5"
+biopython = ">=1.87,<2"
+umi_tools = ">=1.1.6,<2"
+fuzzysearch = ">=0.8.1,<0.9"
+matplotlib-base = ">=3.10.8,<4"
+pip = ">=26.0.1,<27"
+scipy = "1.13.1.*"
 
 [pypi-dependencies]
-darlinpy = { path = "./darlinpy", editable = true, extras = ["fast"] }
+darlinpy = { git = "https://github.com/JarningGau/darlinpy", rev = "52cdae0" }
