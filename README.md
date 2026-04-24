@@ -51,6 +51,24 @@ This command writes sample-specific results under `./output/L141_CA/`.
 
 Detailed bulk documentation, including argument semantics, parameter interactions, output structure, and step-wise execution, is provided in [docs/bulk.md](docs/bulk.md).
 
+For scRNA datasets, the standard entrypoint is `darlin scrna run`, which executes:
+
+`extract -> denoise -> qc -> annotate`
+
+```bash
+darlin scrna run \
+  --sample-id LL837_CA \
+  --fq1 tests/data/sc10xv3/LL837-skull-CA_1.fastq.gz \
+  --fq2 tests/data/sc10xv3/LL837-skull-CA_2.fastq.gz \
+  --protocol 10xv3 \
+  --output-dir ./output \
+  --sample-n 200
+```
+
+This command writes step-wise outputs under `./output/LL837_CA/`.
+
+Detailed scrna documentation, including standard outputs and step-wise execution, is provided in [docs/scrna.md](docs/scrna.md).
+
 ## Development Checks
 
 ```bash

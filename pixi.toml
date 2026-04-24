@@ -5,7 +5,7 @@ name = "darlin"
 platforms = ["linux-64"]
 
 [tasks]
-smoke = "PYTHONPATH=src python -m darlin.cli --help && PYTHONPATH=src python -m darlin.cli bulk --help && PYTHONPATH=src python -m darlin.cli bulk run --help"
+smoke = "PYTHONPATH=src python -m darlin.cli --help && PYTHONPATH=src python -m darlin.cli bulk --help && PYTHONPATH=src python -m darlin.cli bulk run --help && PYTHONPATH=src python -m darlin.cli scrna --help && PYTHONPATH=src python -m darlin.cli scrna run --help"
 install-cli = "python -m pip install -e ."
 compile = "python -m compileall src tests"
 test = "pytest -q"

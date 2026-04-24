@@ -33,3 +33,16 @@ def test_bulk_run_help_mentions_no_progress() -> None:
     assert r.returncode == 0
     assert "--no-progress" in r.stdout
 
+
+def test_scrna_help_mentions_steps() -> None:
+    r = _run("scrna", "--help")
+    assert r.returncode == 0
+    for step in ["run", "extract", "denoise", "qc", "annotate"]:
+        assert step in r.stdout
+
+
+def test_scrna_run_help_mentions_protocol_and_sample_n() -> None:
+    r = _run("scrna", "run", "--help")
+    assert r.returncode == 0
+    assert "--protocol" in r.stdout
+    assert "--sample-n" in r.stdout
