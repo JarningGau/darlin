@@ -5,9 +5,9 @@
 ## Installation
 
 ```bash
-git clone https://github.com/jarninggau/darlin.git
-cd darlin
+pixi run clone-darlinpy
 pixi install
+pixi run build-darlinpy
 pixi run install-cli
 ```
 

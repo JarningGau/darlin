@@ -5,6 +5,8 @@ name = "darlin"
 platforms = ["linux-64"]
 
 [tasks]
+clone-darlinpy = "test -d darlinpy/.git || git clone https://github.com/jarninggau/darlinpy.git darlinpy"
+build-darlinpy = "cd darlinpy && python setup.py build_ext --inplace"
 smoke = "PYTHONPATH=src python -m darlin.cli --help && PYTHONPATH=src python -m darlin.cli bulk --help && PYTHONPATH=src python -m darlin.cli bulk run --help"
 install-cli = "python -m pip install -e ."
 compile = "python -m compileall src tests"
@@ -23,4 +25,4 @@ matplotlib-base = "*"
 pip = "*"
 
 [pypi-dependencies]
-darlinpy = { git = "https://github.com/JarningGau/darlinpy" }
+darlinpy = { path = "./darlinpy", editable = true, extras = ["fast"] }

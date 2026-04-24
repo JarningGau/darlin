@@ -26,6 +26,18 @@ sample_id="L141_CA"
 tmp_out="temp"
 outdir="${tmp_out}/out"
 
+# python -m darlin.cli bulk run \
+#   --sample-id "${sample_id}" \
+#   --fq1 "${fq1}" \
+#   --fq2 "${fq2}" \
+#   --output-dir "${outdir}" \
+#   --threads 1 \
+#   --keep-pear \
+#   --locus Col1a1 \
+#   --umi-ld 1 2  \
+#   --lb-hd-relative 0.01 0.02 \
+#   --sample-n 200
+
 python -m darlin.cli bulk run \
   --sample-id "${sample_id}" \
   --fq1 "${fq1}" \
@@ -34,6 +46,6 @@ python -m darlin.cli bulk run \
   --threads 1 \
   --keep-pear \
   --locus Col1a1 \
-  --umi-ld 1 2  \
-  --lb-hd-relative 0.01 0.02 \
+  --umi-ld 1  \
+  --lb-hd-relative 0.01 \
   --sample-n 200
