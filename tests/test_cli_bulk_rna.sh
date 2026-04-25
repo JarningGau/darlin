@@ -34,5 +34,4 @@ python -m darlin.cli bulk run \
   --keep-pear \
   --locus "${locus}" \
   --umi-ld 1 \
-  --lb-hd-relative 0.01 \
-  --sample-n 200
+  --lb-hd-relative 0.01

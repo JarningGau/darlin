@@ -1,5 +1,16 @@
 # scRNA Command Reference
 
+## Library Structure
+### 10xv3
+PE28+350 (PE250)
+R1: CB+UB (16+12)
+R2: Primer5+DARLIN+Primer3 (350)
+
+### camellia
+PE350+28 (PE250)
+R1: Primer5+DARLIN+Primer3 (350)
+R2: CB+UB (8+8)
+
 ## Overview
 
 The `darlin scrna` command group processes DARLIN single-cell RNA-seq data. The principal entrypoint is `darlin scrna run`, which executes:

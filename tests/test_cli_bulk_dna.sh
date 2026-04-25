@@ -35,8 +35,7 @@ outdir="${tmp_out}/out"
 #   --keep-pear \
 #   --locus Col1a1 \
 #   --umi-ld 1 2  \
-#   --lb-hd-relative 0.01 0.02 \
-#   --sample-n 200
+#   --lb-hd-relative 0.01 0.02
 
 python -m darlin.cli bulk run \
   --sample-id "${sample_id}" \
@@ -47,5 +46,4 @@ python -m darlin.cli bulk run \
   --keep-pear \
   --locus Col1a1 \
   --umi-ld 1  \
-  --lb-hd-relative 0.01 \
-  --sample-n 200
+  --lb-hd-relative 0.01 

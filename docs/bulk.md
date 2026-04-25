@@ -1,5 +1,9 @@
 # Bulk Command Reference
 
+## Library Structure
+R1: UMI-primer3-DARLIN-primer5
+R2: primer5-DARLIN-primer3-UMI
+
 ## Overview
 
 The `darlin bulk` command group processes bulk DNA/RNA lineage-tracing data. The principal entrypoint is `darlin bulk run`, which executes the complete workflow:
