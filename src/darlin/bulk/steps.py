@@ -295,29 +295,44 @@ def step_finalize(
         )
 
     final = agg2.merge(results_allele, on="query", how="left")
+    input_queries = len(final)
+    annotated_mask = final["aligned_query"].notna() & final["aligned_ref"].notna()
+    dropped_unannotated = int((~annotated_mask).sum())
+    final = final[annotated_mask].copy()
     keep_cols = ["query", "UMIs", "mutations", "confidence", "aligned_query", "aligned_ref"]
     final = final[[c for c in keep_cols if c in final.columns]].copy()
 
-    final["md5"] = final.apply(lambda r: _concat_and_md5(r["aligned_query"], r["aligned_ref"]), axis=1)
-
-    final2 = (
-        final.drop(columns=["query"], errors="ignore")
-        .groupby("md5", as_index=False)
-        .agg(
-            {
-                "UMIs": "sum",
-                "mutations": "first",
-                "confidence": "first",
-                "aligned_query": "first",
-                "aligned_ref": "first",
-            }
+    if final.empty:
+        final2 = final.drop(columns=["query"], errors="ignore").copy()
+        final2["md5"] = pd.Series(dtype=str)
+        final2 = final2.reindex(columns=["md5", "UMIs", "mutations", "confidence", "aligned_query", "aligned_ref"])
+    else:
+        final["md5"] = final.apply(lambda r: _concat_and_md5(r["aligned_query"], r["aligned_ref"]), axis=1)
+        final2 = (
+            final.drop(columns=["query"], errors="ignore")
+            .groupby("md5", as_index=False)
+            .agg(
+                {
+                    "UMIs": "sum",
+                    "mutations": "first",
+                    "confidence": "first",
+                    "aligned_query": "first",
+                    "aligned_ref": "first",
+                }
+            )
+            .sort_values(by="UMIs", ascending=False)
+            .reset_index(drop=True)
         )
-        .sort_values(by="UMIs", ascending=False)
-        .reset_index(drop=True)
-    )
 
     final2.to_csv(combo.alleles_tsv, sep="\t", index=False)
-    logger.info(f"Final alleles saved to: {combo.alleles_tsv}")
+    logger.info(
+        "Finalize: input_queries=%s annotated_queries=%s unannotated_queries_dropped=%s final_alleles=%s -> %s",
+        input_queries,
+        input_queries - dropped_unannotated,
+        dropped_unannotated,
+        len(final2),
+        combo.alleles_tsv,
+    )
     return combo.alleles_tsv
 
 
@@ -328,4 +343,3 @@ def step_cleanup_pear(*, paths: BulkPaths, keep_pear: bool, logger: logging.Logg
         logger.info("Cleaning up PEAR output directory...")
         shutil.rmtree(paths.pear_dir)
         logger.info(f"PEAR output directory removed: {paths.pear_dir}")
-

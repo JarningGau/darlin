@@ -304,15 +304,31 @@ def step_annotate(
 ) -> pd.DataFrame:
     from darlinpy import analyze_sequences  # type: ignore
 
+    def _write_grouped_counts(final_df: pd.DataFrame) -> pd.DataFrame:
+        grouped = (
+            final_df.groupby(["CR", "LR"], as_index=False)["UR"]
+            .nunique()
+            .rename(columns={"UR": "n_UMIs"})
+        )
+        grouped.to_csv(paths.numis_by_cell_and_lineage_tsv, sep="\t", index=False)
+        return grouped
+
     df = pd.read_csv(qc_tsv, sep="\t")
     query = df["LR"].dropna().astype(str).drop_duplicates().tolist()
     if not query:
         final_df = df.reindex(columns=["CR", "LR", "UR", "reads"]).copy()
         final_df["mutations"] = pd.Series(dtype=object)
+        final_df["aligned_LR"] = pd.Series(dtype=object)
         final_df["md5"] = pd.Series(dtype=str)
-        final_df = final_df[["CR", "LR", "UR", "reads", "mutations", "md5"]]
+        final_df = final_df[["CR", "LR", "UR", "reads", "mutations", "aligned_LR", "md5"]]
         final_df.to_csv(paths.annotated_tsv, sep="\t", index=False)
-        logger.info("Annotate: analyzed_queries=0 rows_written=0 -> %s", paths.annotated_tsv)
+        grouped = _write_grouped_counts(final_df)
+        logger.info(
+            "Annotate: analyzed_queries=0 rows_written=0 grouped_rows=%s -> %s | %s",
+            len(grouped),
+            paths.annotated_tsv,
+            paths.numis_by_cell_and_lineage_tsv,
+        )
         return final_df
 
     results = analyze_sequences(
@@ -323,12 +339,16 @@ def step_annotate(
     ).to_df()
     merged = df.merge(results, left_on="LR", right_on="query", how="left")
     merged["md5"] = merged.apply(lambda row: _concat_and_md5(row["aligned_query"], row["aligned_ref"]), axis=1)
-    final_df = merged[["CR", "LR", "UR", "reads", "mutations", "md5"]].copy()
+    final_df = merged[["CR", "LR", "UR", "reads", "mutations", "aligned_query", "md5"]].copy()
+    final_df = final_df.rename(columns={"aligned_query": "aligned_LR"})
     final_df.to_csv(paths.annotated_tsv, sep="\t", index=False)
+    grouped = _write_grouped_counts(final_df)
     logger.info(
-        "Annotate: analyzed_queries=%s rows_written=%s -> %s",
+        "Annotate: analyzed_queries=%s rows_written=%s grouped_rows=%s -> %s | %s",
         len(query),
         len(final_df),
+        len(grouped),
         paths.annotated_tsv,
+        paths.numis_by_cell_and_lineage_tsv,
     )
     return final_df

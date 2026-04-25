@@ -72,8 +72,9 @@ def _fmt_size(path: Path) -> str:
 def _build_replay_cmd(
     *,
     sample_id: str,
-    fq1: str,
-    fq2: str,
+    fq1: str | None,
+    fq2: str | None,
+    assembled_fq: str | None,
     output_dir: str,
     locus: str,
     umi_len: int,
@@ -93,8 +94,6 @@ def _build_replay_cmd(
     parts: list[str] = [
         "darlin", "bulk", "run",
         "--sample-id", sample_id,
-        "--fq1", fq1,
-        "--fq2", fq2,
         "--output-dir", str(output_dir),
         "--locus", locus,
         "--umi-len", str(umi_len),
@@ -104,8 +103,14 @@ def _build_replay_cmd(
         "--threads", str(threads),
         "--log-level", log_level,
     ]
+    if fq1 is not None:
+        parts.extend(["--fq1", fq1])
+    if fq2 is not None:
+        parts.extend(["--fq2", fq2])
     if skip_pear:
         parts.append("--skip-pear")
+        if assembled_fq is not None:
+            parts.extend(["--assembled-fq", assembled_fq])
     if keep_pear:
         parts.append("--keep-pear")
     if test:
@@ -157,8 +162,9 @@ def _log_result_summary(
 def run_bulk_pipeline(
     *,
     sample_id: str,
-    fq1: str,
-    fq2: str,
+    fq1: str | None,
+    fq2: str | None,
+    assembled_fq: str | None = None,
     output_dir: str,
     locus: str = "Col1a1",
     umi_len: int = 12,
@@ -195,7 +201,7 @@ def run_bulk_pipeline(
     timer.total_steps = _count_steps(skip_pear=skip_pear, n_combos=n_combos)
 
     replay_cmd = _build_replay_cmd(
-        sample_id=sample_id, fq1=fq1, fq2=fq2, output_dir=output_dir,
+        sample_id=sample_id, fq1=fq1, fq2=fq2, assembled_fq=assembled_fq, output_dir=output_dir,
         locus=locus, umi_len=umi_len, min_bc_len=min_bc_len,
         reads_cutoff=reads_cutoff, pear_path=pear_path, threads=threads,
         log_level=log_level, skip_pear=skip_pear, keep_pear=keep_pear,
@@ -205,8 +211,11 @@ def run_bulk_pipeline(
 
     logger.info("--------------------------------")
     logger.info("Starting bulk pipeline for sample: %s", sample_id)
-    logger.info("  Input R1: %s (%s)", Path(fq1).name, _fmt_size(Path(fq1)))
-    logger.info("  Input R2: %s (%s)", Path(fq2).name, _fmt_size(Path(fq2)))
+    if fq1 is not None and fq2 is not None:
+        logger.info("  Input R1: %s (%s)", Path(fq1).name, _fmt_size(Path(fq1)))
+        logger.info("  Input R2: %s (%s)", Path(fq2).name, _fmt_size(Path(fq2)))
+    elif assembled_fq is not None:
+        logger.info("  Assembled: %s (%s)", Path(assembled_fq).name, _fmt_size(Path(assembled_fq)))
     logger.info("  Output:   %s", paths.sample_dir)
     logger.info("  Locus:    %s", locus)
     logger.info("  Threads:  %s", threads)
@@ -218,6 +227,8 @@ def run_bulk_pipeline(
     unedited_bc_len, p3_rc, p5_rc = resolve_bulk_primers(locus=locus)
 
     if not skip_pear:
+        if fq1 is None or fq2 is None:
+            raise ValueError("fq1 and fq2 are required when skip_pear is False")
         timer.start("PEAR")
         assembled = step_pear(
             fq1=fq1,
@@ -228,7 +239,7 @@ def run_bulk_pipeline(
             logger=logger,
         )
     else:
-        assembled = paths.assembled_fastq
+        assembled = Path(assembled_fq) if assembled_fq is not None else paths.assembled_fastq
         logger.info("PEAR (skipped)")
         if not assembled.exists():
             raise FileNotFoundError(f"Assembled FASTQ file not found: {assembled}")
@@ -312,4 +323,3 @@ def run_bulk_pipeline(
     _log_timing_summary(logger, timer.summary())
     _log_result_summary(logger, combo_allele_paths, elapsed)
     return 0
-

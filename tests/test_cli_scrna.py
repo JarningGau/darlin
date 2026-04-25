@@ -219,6 +219,7 @@ def test_scrna_run_small_sample_completes_after_validation(tmp_path: Path) -> No
     assert r.returncode == 0, f"stdout:\n{r.stdout}\n\nstderr:\n{r.stderr}"
     sample_dir = tmp_path / "out" / "LL837_CA"
     assert (sample_dir / "annotated.tsv").exists()
+    assert (sample_dir / "nUMIs_by_cell_and_lineage.tsv").exists()
 
 
 def test_cli_scrna_extract_produces_outputs(tmp_path: Path) -> None:
@@ -345,10 +346,23 @@ def test_cli_scrna_annotate_produces_required_columns(tmp_path: Path) -> None:
     assert r.returncode == 0, f"stdout:\n{r.stdout}\n\nstderr:\n{r.stderr}"
 
     annotated = sample_dir / "annotated.tsv"
+    grouped = sample_dir / "nUMIs_by_cell_and_lineage.tsv"
     assert annotated.exists()
+    assert grouped.exists()
     df = pd.read_csv(annotated, sep="\t")
-    for column in ["CR", "LR", "UR", "reads", "mutations", "md5"]:
+    for column in ["CR", "LR", "UR", "reads", "mutations", "aligned_LR", "md5"]:
         assert column in df.columns
+    grouped_df = pd.read_csv(grouped, sep="\t")
+    assert list(grouped_df.columns) == ["CR", "LR", "n_UMIs"]
+    expected = (
+        df.groupby(["CR", "LR"], as_index=False)["UR"]
+        .nunique()
+        .rename(columns={"UR": "n_UMIs"})
+        .sort_values(["CR", "LR"])
+        .reset_index(drop=True)
+    )
+    observed = grouped_df.sort_values(["CR", "LR"]).reset_index(drop=True)
+    pd.testing.assert_frame_equal(observed, expected)
 
 
 def test_cli_scrna_run_produces_outputs(tmp_path: Path) -> None:
@@ -382,6 +396,7 @@ def test_cli_scrna_run_produces_outputs(tmp_path: Path) -> None:
         sample_dir / "qc.tsv",
         sample_dir / "cell_summary.tsv",
         sample_dir / "annotated.tsv",
+        sample_dir / "nUMIs_by_cell_and_lineage.tsv",
     ]:
         assert path.exists(), f"Expected output missing: {path}"
 
@@ -417,3 +432,4 @@ def test_cli_scrna_camellia_run_produces_outputs(tmp_path: Path) -> None:
     assert extracted["CB"].str.len().eq(8).all()
     assert extracted["UB"].str.len().eq(8).all()
     assert (sample_dir / "annotated.tsv").exists()
+    assert (sample_dir / "nUMIs_by_cell_and_lineage.tsv").exists()

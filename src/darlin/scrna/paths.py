@@ -14,6 +14,7 @@ class ScrnaPaths:
     qc_tsv: Path
     cell_summary_tsv: Path
     annotated_tsv: Path
+    numis_by_cell_and_lineage_tsv: Path
 
     def ensure_dirs(self) -> None:
         self.sample_dir.mkdir(parents=True, exist_ok=True)
@@ -34,5 +35,5 @@ def get_scrna_paths(output_dir: str | Path, sample_id: str) -> ScrnaPaths:
         qc_tsv=sample_dir / "qc.tsv",
         cell_summary_tsv=sample_dir / "cell_summary.tsv",
         annotated_tsv=sample_dir / "annotated.tsv",
+        numis_by_cell_and_lineage_tsv=sample_dir / "nUMIs_by_cell_and_lineage.tsv",
     )
-

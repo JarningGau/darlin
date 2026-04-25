@@ -47,8 +47,14 @@ def _bulk_main(_: argparse.Namespace) -> int:
 
 def _add_bulk_run(steps: argparse._SubParsersAction) -> None:
     p = steps.add_parser("run", help="Run the full bulk pipeline", formatter_class=HELP_FORMATTER)
-    _add_common_bulk_args(p, include_fqs=True)
-    p.add_argument("--skip-pear", action="store_true", help="Skip PEAR assembly (use existing assembled file)")
+    _add_common_bulk_args(p, include_fqs=True, require_fqs=False)
+    p.add_argument("--skip-pear", action="store_true", help="Skip PEAR assembly and use an existing assembled FASTQ")
+    p.add_argument(
+        "--assembled-fq",
+        type=str,
+        default=None,
+        help="Path to assembled FASTQ when using --skip-pear (defaults to <output-dir>/<sample-id>/pear/pear.assembled.fastq)",
+    )
     p.add_argument("--keep-pear", action="store_true", help="Keep PEAR output directory after completion")
     p.add_argument("--denoise-iter", type=int, default=1, help="Number of denoising iterations")
     p.add_argument("--umi-ld", type=int, nargs="+", default=[1], help="List of UMI clustering thresholds")
@@ -80,7 +86,6 @@ def _add_bulk_extract(steps: argparse._SubParsersAction) -> None:
         default=None,
         help="Path to assembled FASTQ (defaults to <output-dir>/<sample-id>/pear/pear.assembled.fastq)",
     )
-    p.add_argument("--skip-pear", action="store_true", help="Skip PEAR assembly (requires assembled FASTQ to exist)")
     p.add_argument("--log-level", type=str, default="INFO", choices=["DEBUG", "INFO", "WARNING", "ERROR"], help="Logging level")
     p.add_argument("--no-progress", action="store_true", help="Disable tqdm progress bars (cleaner logs for batch/CI)")
     p.add_argument("--test", action="store_true", help="Test mode: only process first ~2500 reads")
@@ -142,6 +147,7 @@ def _add_common_bulk_args(
     *,
     include_fqs: bool,
     include_reads_cutoff: bool = True,
+    require_fqs: bool = True,
 ) -> None:
     p.add_argument("--sample-id", type=str, required=True, help="Sample ID for output directory naming")
     p.add_argument("--output-dir", type=str, default="./output", help="Base output directory")
@@ -158,8 +164,8 @@ def _add_common_bulk_args(
     p.add_argument("--pear-path", type=str, default="pear", help="Path to PEAR executable")
     p.add_argument("--threads", type=int, default=8, help="Number of threads for PEAR")
     if include_fqs:
-        p.add_argument("--fq1", type=str, required=True, help="Path to forward reads FASTQ file")
-        p.add_argument("--fq2", type=str, required=True, help="Path to reverse reads FASTQ file")
+        p.add_argument("--fq1", type=str, required=require_fqs, help="Path to forward reads FASTQ file")
+        p.add_argument("--fq2", type=str, required=require_fqs, help="Path to reverse reads FASTQ file")
 
 
 def _bulk_run(args: argparse.Namespace) -> int:
@@ -170,10 +176,21 @@ def _bulk_run(args: argparse.Namespace) -> int:
         return 1
     try:
         if args.skip_pear:
+            assembled_fq = Path(args.assembled_fq) if args.assembled_fq else paths.assembled_fastq
             require_readable_files(
-                [("Assembled FASTQ (default: <output-dir>/<sample-id>/pear/pear.assembled.fastq)", paths.assembled_fastq)]
+                [("Assembled FASTQ (--assembled-fq or default pear output)", assembled_fq)]
             )
         else:
+            missing_fqs: list[str] = []
+            if not args.fq1:
+                missing_fqs.append("--fq1")
+            if not args.fq2:
+                missing_fqs.append("--fq2")
+            if missing_fqs:
+                raise BulkInputError(
+                    "Missing required input files when not using --skip-pear:\n  "
+                    + ", ".join(missing_fqs)
+                )
             require_readable_files(
                 [
                     ("Forward reads (--fq1)", args.fq1),
@@ -189,6 +206,7 @@ def _bulk_run(args: argparse.Namespace) -> int:
         sample_id=args.sample_id,
         fq1=args.fq1,
         fq2=args.fq2,
+        assembled_fq=args.assembled_fq,
         output_dir=args.output_dir,
         locus=args.locus,
         umi_len=args.umi_len,
