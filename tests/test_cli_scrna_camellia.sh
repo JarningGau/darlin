@@ -27,7 +27,7 @@ whitelist="${ROOT_DIR}/reference/whitelist/scCamellia.txt.gz"
 locus="Col1a1"
 
 tmp_out="temp"
-outdir="${tmp_out}/out"
+outdir="${tmp_out}/scrna_camellia"
 sample_dir="${outdir}/${sample_id}"
 
 python -m darlin.cli scrna run \

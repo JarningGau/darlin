@@ -27,7 +27,7 @@ whitelist="${ROOT_DIR}/reference/whitelist/10xv3.txt.gz"
 locus="Col1a1"
 
 tmp_out="temp"
-outdir="${tmp_out}/out"
+outdir="${tmp_out}/scrna_10xv3"
 sample_dir="${outdir}/${sample_id}"
 
 python -m darlin.cli scrna run \

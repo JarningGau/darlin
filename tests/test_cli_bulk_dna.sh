@@ -24,7 +24,7 @@ fq2="${ROOT_DIR}/tests/data/bulkdna/L141_CA_R2.fq.gz"
 sample_id="L141_CA"
 
 tmp_out="temp"
-outdir="${tmp_out}/out"
+outdir="${tmp_out}/bulk_dna"
 
 # python -m darlin.cli bulk run \
 #   --sample-id "${sample_id}" \

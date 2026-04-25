@@ -23,7 +23,7 @@ sample_id="LL583_RA"
 locus="Rosa"
 
 tmp_out="temp"
-outdir="${tmp_out}/out"
+outdir="${tmp_out}/bulk_rna"
 
 python -m darlin.cli bulk run \
   --sample-id "${sample_id}" \
