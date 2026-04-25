@@ -5,9 +5,7 @@
 ## Installation
 
 ```bash
-pixi run clone-darlinpy
 pixi install
-pixi run build-darlinpy
 pixi run install-cli
 ```
 

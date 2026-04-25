@@ -6,11 +6,14 @@ from pathlib import Path
 
 from darlin.scrna.validate import ScrnaInputError, require_protocol, require_readable_files, resolve_whitelist_path
 
+HELP_FORMATTER = argparse.ArgumentDefaultsHelpFormatter
+
 
 def add_scrna_command(subparsers: argparse._SubParsersAction) -> None:
     scrna = subparsers.add_parser(
         "scrna",
         help="Recover lineage information from single-cell RNA-seq data",
+        formatter_class=HELP_FORMATTER,
     )
     scrna.set_defaults(func=_scrna_main)
 
@@ -55,7 +58,7 @@ def _add_common_scrna_args(
 
 
 def _add_scrna_run(steps: argparse._SubParsersAction) -> None:
-    p = steps.add_parser("run", help="Run the full scrna pipeline")
+    p = steps.add_parser("run", help="Run the full scrna pipeline", formatter_class=HELP_FORMATTER)
     _add_common_scrna_args(p, include_fqs=True)
     p.add_argument("--umi-ld", type=int, default=1, help="UMI clustering threshold")
     p.add_argument("--lb-error-rate", type=float, default=0.01, help="Relative lineage barcode error rate")
@@ -69,21 +72,29 @@ def _add_scrna_run(steps: argparse._SubParsersAction) -> None:
     p.add_argument(
         "--reads-umis-ratio-cutoff",
         type=float,
-        default=10.0,
+        default=1.0,
         help="Minimum reads/UMIs ratio per corrected cell barcode",
     )
-    p.add_argument("--reads-cutoff", type=int, default=10, help="Minimum reads per molecule after QC")
+    p.add_argument("--reads-cutoff", type=int, default=1, help="Minimum reads per molecule after QC")
     p.set_defaults(func=_scrna_run)
 
 
 def _add_scrna_extract(steps: argparse._SubParsersAction) -> None:
-    p = steps.add_parser("extract", help="Extract lineage barcode, cell barcode, and UMI from FASTQ pairs")
+    p = steps.add_parser(
+        "extract",
+        help="Extract lineage barcode, cell barcode, and UMI from FASTQ pairs",
+        formatter_class=HELP_FORMATTER,
+    )
     _add_common_scrna_args(p, include_fqs=True)
     p.set_defaults(func=_scrna_extract)
 
 
 def _add_scrna_denoise(steps: argparse._SubParsersAction) -> None:
-    p = steps.add_parser("denoise", help="Denoise cell barcodes, UMIs, and lineage barcodes")
+    p = steps.add_parser(
+        "denoise",
+        help="Denoise cell barcodes, UMIs, and lineage barcodes",
+        formatter_class=HELP_FORMATTER,
+    )
     _add_common_scrna_args(p, include_fqs=False)
     p.add_argument(
         "--extracted",
@@ -98,7 +109,7 @@ def _add_scrna_denoise(steps: argparse._SubParsersAction) -> None:
 
 
 def _add_scrna_qc(steps: argparse._SubParsersAction) -> None:
-    p = steps.add_parser("qc", help="Run molecular and cellular QC")
+    p = steps.add_parser("qc", help="Run molecular and cellular QC", formatter_class=HELP_FORMATTER)
     _add_common_scrna_args(p, include_fqs=False)
     p.add_argument(
         "--denoised",
@@ -115,15 +126,15 @@ def _add_scrna_qc(steps: argparse._SubParsersAction) -> None:
     p.add_argument(
         "--reads-umis-ratio-cutoff",
         type=float,
-        default=10.0,
+        default=1.0,
         help="Minimum reads/UMIs ratio per corrected cell barcode",
     )
-    p.add_argument("--reads-cutoff", type=int, default=10, help="Minimum reads per molecule after QC")
+    p.add_argument("--reads-cutoff", type=int, default=1, help="Minimum reads per molecule after QC")
     p.set_defaults(func=_scrna_qc)
 
 
 def _add_scrna_annotate(steps: argparse._SubParsersAction) -> None:
-    p = steps.add_parser("annotate", help="Annotate corrected lineage barcodes")
+    p = steps.add_parser("annotate", help="Annotate corrected lineage barcodes", formatter_class=HELP_FORMATTER)
     _add_common_scrna_args(p, include_fqs=False)
     p.add_argument(
         "--qc",

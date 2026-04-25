@@ -43,8 +43,8 @@ darlin scrna run \
 | `--lb-error-rate` | `0.01` | Relative lineage-barcode error rate used to derive the Hamming-distance threshold per `(CR, UR, LB_len)` group. |
 | `--lb-min-hd` | `1` | Minimum lineage-barcode Hamming-distance threshold. |
 | `--major-fraction-threshold-molecule` | `0.8` | Minimum read fraction for the major corrected lineage barcode within a `(CR, UR)` molecule. |
-| `--reads-umis-ratio-cutoff` | `10` | Minimum `reads / UMIs` ratio per corrected cell barcode during cell-level QC. |
-| `--reads-cutoff` | `10` | Minimum read support per molecule retained after QC. |
+| `--reads-umis-ratio-cutoff` | `1` | Minimum `reads / UMIs` ratio per corrected cell barcode during cell-level QC. |
+| `--reads-cutoff` | `1` | Minimum read support per molecule retained after QC. |
 
 ## Standard Outputs
 

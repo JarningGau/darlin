@@ -6,6 +6,8 @@ from pathlib import Path
 
 from darlin.bulk.validate import BulkInputError, require_pear_executable, require_readable_files
 
+HELP_FORMATTER = argparse.ArgumentDefaultsHelpFormatter
+
 
 def _get_bulk_paths_cli(output_dir: str, sample_id: str):
     """Resolve bulk output paths or print validation error and return None."""
@@ -22,6 +24,7 @@ def add_bulk_command(subparsers: argparse._SubParsersAction) -> None:
     bulk = subparsers.add_parser(
         "bulk",
         help="Recover lineage information from bulk DNA/RNA data",
+        formatter_class=HELP_FORMATTER,
     )
     bulk.set_defaults(func=_bulk_main)
 
@@ -43,7 +46,7 @@ def _bulk_main(_: argparse.Namespace) -> int:
 
 
 def _add_bulk_run(steps: argparse._SubParsersAction) -> None:
-    p = steps.add_parser("run", help="Run the full bulk pipeline")
+    p = steps.add_parser("run", help="Run the full bulk pipeline", formatter_class=HELP_FORMATTER)
     _add_common_bulk_args(p, include_fqs=True)
     p.add_argument("--skip-pear", action="store_true", help="Skip PEAR assembly (use existing assembled file)")
     p.add_argument("--keep-pear", action="store_true", help="Keep PEAR output directory after completion")
@@ -58,14 +61,18 @@ def _add_bulk_run(steps: argparse._SubParsersAction) -> None:
 
 
 def _add_bulk_pear(steps: argparse._SubParsersAction) -> None:
-    p = steps.add_parser("pear", help="Assemble paired-end reads (PEAR)")
+    p = steps.add_parser("pear", help="Assemble paired-end reads (PEAR)", formatter_class=HELP_FORMATTER)
     _add_common_bulk_args(p, include_fqs=True)
     p.add_argument("--log-level", type=str, default="INFO", choices=["DEBUG", "INFO", "WARNING", "ERROR"], help="Logging level")
     p.set_defaults(func=_bulk_pear)
 
 
 def _add_bulk_extract(steps: argparse._SubParsersAction) -> None:
-    p = steps.add_parser("extract", help="Extract lineage barcode + UMI from assembled FASTQ")
+    p = steps.add_parser(
+        "extract",
+        help="Extract lineage barcode + UMI from assembled FASTQ",
+        formatter_class=HELP_FORMATTER,
+    )
     _add_common_bulk_args(p, include_fqs=False)
     p.add_argument(
         "--assembled-fq",
@@ -82,7 +89,7 @@ def _add_bulk_extract(steps: argparse._SubParsersAction) -> None:
 
 
 def _add_bulk_filter(steps: argparse._SubParsersAction) -> None:
-    p = steps.add_parser("filter", help="Filter/aggregate extracted reads")
+    p = steps.add_parser("filter", help="Filter/aggregate extracted reads", formatter_class=HELP_FORMATTER)
     _add_common_bulk_args(p, include_fqs=False, include_reads_cutoff=True)
     p.add_argument(
         "--extracted",
@@ -95,7 +102,7 @@ def _add_bulk_filter(steps: argparse._SubParsersAction) -> None:
 
 
 def _add_bulk_denoise(steps: argparse._SubParsersAction) -> None:
-    p = steps.add_parser("denoise", help="Denoise lineage barcodes and UMIs")
+    p = steps.add_parser("denoise", help="Denoise lineage barcodes and UMIs", formatter_class=HELP_FORMATTER)
     _add_common_bulk_args(p, include_fqs=False)
     p.add_argument(
         "--filtered",
@@ -115,6 +122,7 @@ def _add_bulk_annotate(steps: argparse._SubParsersAction) -> None:
     p = steps.add_parser(
         "annotate",
         help="Annotate alleles (darlinpy) and write alleles_by_umis.tsv",
+        formatter_class=HELP_FORMATTER,
     )
     _add_common_bulk_args(p, include_fqs=False)
     p.add_argument("--umi-ld", type=int, default=1, help="UMI clustering threshold (for output dir naming)")
