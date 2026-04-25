@@ -71,6 +71,32 @@ def _run_qc_fixture(tmp_path: Path) -> Path:
     return sample_dir
 
 
+def _run_camellia_extract_fixture(tmp_path: Path) -> Path:
+    sample_id = "LL653_CA"
+    outdir = tmp_path / "out"
+    fq1 = Path("tests/data/scCamellia/LL653-CA_L001_R1_001.fastq.gz")
+    fq2 = Path("tests/data/scCamellia/LL653-CA_L001_R2_001.fastq.gz")
+    r = _run(
+        "scrna",
+        "extract",
+        "--sample-id",
+        sample_id,
+        "--fq1",
+        str(fq1),
+        "--fq2",
+        str(fq2),
+        "--protocol",
+        "camellia",
+        "--output-dir",
+        str(outdir),
+        "--sample-n",
+        "200",
+        "--no-progress",
+    )
+    assert r.returncode == 0, f"stdout:\n{r.stdout}\n\nstderr:\n{r.stderr}"
+    return outdir / sample_id
+
+
 def test_scrna_run_missing_fq1_exits_cleanly(tmp_path: Path) -> None:
     fq2 = Path("tests/data/sc10xv3/LL837-skull-CA_2.fastq.gz")
     assert fq2.exists()
@@ -228,6 +254,22 @@ def test_cli_scrna_extract_produces_outputs(tmp_path: Path) -> None:
     assert header == ["LB", "CB", "UB", "LB_len"]
 
 
+def test_cli_scrna_camellia_extract_produces_outputs(tmp_path: Path) -> None:
+    sample_dir = _run_camellia_extract_fixture(tmp_path)
+
+    extracted = sample_dir / "extracted.tsv"
+    plot = sample_dir / "diagnostics" / "extract_lb_length.png"
+    assert extracted.exists()
+    assert plot.exists()
+
+    df = pd.read_csv(extracted, sep="\t")
+    assert list(df.columns) == ["LB", "CB", "UB", "LB_len"]
+    assert not df.empty
+    assert df["CB"].str.len().eq(8).all()
+    assert df["UB"].str.len().eq(8).all()
+    assert df["LB_len"].gt(0).any()
+
+
 def test_cli_scrna_denoise_produces_required_columns(tmp_path: Path) -> None:
     sample_dir = _run_extract_fixture(tmp_path)
 
@@ -341,3 +383,36 @@ def test_cli_scrna_run_produces_outputs(tmp_path: Path) -> None:
         sample_dir / "annotated.tsv",
     ]:
         assert path.exists(), f"Expected output missing: {path}"
+
+
+def test_cli_scrna_camellia_run_produces_outputs(tmp_path: Path) -> None:
+    fq1 = Path("tests/data/scCamellia/LL653-CA_L001_R1_001.fastq.gz")
+    fq2 = Path("tests/data/scCamellia/LL653-CA_L001_R2_001.fastq.gz")
+    sample_id = "LL653_CA"
+    outdir = tmp_path / "out"
+
+    r = _run(
+        "scrna",
+        "run",
+        "--sample-id",
+        sample_id,
+        "--fq1",
+        str(fq1),
+        "--fq2",
+        str(fq2),
+        "--protocol",
+        "camellia",
+        "--output-dir",
+        str(outdir),
+        "--sample-n",
+        "200",
+        "--no-progress",
+    )
+    assert r.returncode == 0, f"stdout:\n{r.stdout}\n\nstderr:\n{r.stderr}"
+
+    sample_dir = outdir / sample_id
+    extracted = pd.read_csv(sample_dir / "extracted.tsv", sep="\t")
+    assert not extracted.empty
+    assert extracted["CB"].str.len().eq(8).all()
+    assert extracted["UB"].str.len().eq(8).all()
+    assert (sample_dir / "annotated.tsv").exists()

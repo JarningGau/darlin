@@ -11,6 +11,11 @@ PE350+28 (PE250)
 R1: Primer5+DARLIN+Primer3 (350)
 R2: CB+UB (8+8)
 
+Built-in whitelist defaults:
+
+- `10xv3`: `reference/whitelist/10xv3.txt.gz`
+- `camellia`: `reference/whitelist/scCamellia.txt.gz`
+
 ## Overview
 
 The `darlin scrna` command group processes DARLIN single-cell RNA-seq data. The principal entrypoint is `darlin scrna run`, which executes:

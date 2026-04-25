@@ -43,17 +43,21 @@ def step_extract(
             if max_reads is not None and total_reads > max_reads:
                 break
 
-            cb = seq1[: protocol.cb_len]
-            ub = seq1[protocol.cb_len : protocol.cb_len + protocol.umi_len]
+            reads = {"fq1": seq1, "fq2": seq2}
+            barcode_seq = reads[protocol.barcode_read]
+            darlin_seq = reads[protocol.darlin_read]
+
+            cb = barcode_seq[: protocol.cb_len]
+            ub = barcode_seq[protocol.cb_len : protocol.cb_len + protocol.umi_len]
             if "N" in cb or "N" in ub:
                 skipped_barcode_n += 1
                 continue
 
-            match_result = find_all_matches(seq2, p3_seq, p5_seq, p3_mm, p5_mm)
+            match_result = find_all_matches(darlin_seq, p3_seq, p5_seq, p3_mm, p5_mm)
             if len(match_result.p3_matches) == 1 and len(match_result.p5_matches) == 1:
                 start = match_result.p5_matches[0].end
                 end = match_result.p3_matches[0].start
-                lb = seq2[start:end]
+                lb = darlin_seq[start:end]
                 rows.append((lb, cb, ub, len(lb)))
                 matched_reads += 1
             else:
