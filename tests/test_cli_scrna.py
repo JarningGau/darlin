@@ -325,6 +325,7 @@ def test_cli_scrna_qc_writes_tables_and_plots(tmp_path: Path) -> None:
         "qc_reads_fraction_scatter.png",
         "qc_reads_vs_umis.png",
         "qc_k_cutoff_curve.png",
+        "qc_reads_cutoff_retention.png",
         "qc_n_lr_per_cr_hist.png",
     ]:
         assert (sample_dir / "diagnostics" / name).exists()

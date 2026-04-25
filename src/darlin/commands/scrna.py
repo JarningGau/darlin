@@ -231,13 +231,14 @@ def _scrna_extract(args: argparse.Namespace) -> int:
     from darlin.scrna.steps import step_extract
 
     logger = setup_logging(paths.log_file, getattr(logging, args.log_level.upper(), logging.INFO))
-    p3_seq, p5_seq = resolve_scrna_primers(locus=args.locus)
+    unedited_bc_len, p3_seq, p5_seq = resolve_scrna_primers(locus=args.locus)
     step_extract(
         fq1=Path(args.fq1),
         fq2=Path(args.fq2),
         protocol=protocol,
         p3_seq=p3_seq,
         p5_seq=p5_seq,
+        unedited_bc_len=unedited_bc_len,
         paths=paths,
         logger=logger,
         max_reads=resolve_max_reads(test=bool(args.test), sample_n=args.sample_n),

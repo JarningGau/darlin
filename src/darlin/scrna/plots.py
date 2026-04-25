@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 
-def write_extract_plots(df, diagnostics_dir: Path) -> None:
+def write_extract_plots(df, diagnostics_dir: Path, *, unedited_bc_len: int) -> None:
     import matplotlib
 
     matplotlib.use("Agg")
@@ -13,10 +13,17 @@ def write_extract_plots(df, diagnostics_dir: Path) -> None:
     fig, ax = plt.subplots(figsize=(4, 2.5))
     if len(df) > 0:
         lengths = df["LB_len"].astype(int)
-        bins = range(1, max(int(lengths.max()) + 2, 3))
-        ax.hist(lengths, bins=bins, edgecolor="white")
+        counts = lengths.value_counts().sort_index()
+        ax.bar(
+            counts.index.astype(int),
+            counts.values.astype(int),
+            width=0.9,
+            color="#4C72B0",
+        )
+        ax.set_xlim(0, 300)
     else:
         ax.text(0.5, 0.5, "No matched reads", ha="center", va="center", transform=ax.transAxes)
+    ax.axvline(unedited_bc_len, color="red", linestyle="--", linewidth=0.8)
     ax.set_xlabel("LB length")
     ax.set_ylabel("Reads")
     ax.set_title("Extracted lineage barcode lengths")
@@ -32,6 +39,8 @@ def write_qc_plots(
     diagnostics_dir: Path,
     *,
     major_fraction_threshold_molecule: float,
+    df_after_k,
+    reads_cutoff: int,
 ) -> None:
     import matplotlib
 
@@ -82,6 +91,34 @@ def write_qc_plots(
     ax.set_ylabel("Cells >= cutoff")
     fig.tight_layout()
     fig.savefig(diagnostics_dir / "qc_k_cutoff_curve.png", dpi=150)
+    plt.close(fig)
+
+    fig, ax = plt.subplots(figsize=(4, 2.5))
+    if len(df_after_k) > 0:
+        reads_arr = df_after_k["reads"].to_numpy()
+        r_tot = float(reads_arr.sum())
+        if r_tot > 0:
+            max_r = int(reads_arr.max())
+            cap = 500
+            if max_r <= cap:
+                xs = list(range(0, max_r + 1))
+            else:
+                xs = list(range(0, cap + 1))
+                step = max(1, (max_r - cap) // 300)
+                xs.extend(list(range(cap + step, max_r + 1, step)))
+                if xs[-1] < max_r:
+                    xs.append(max_r)
+            ys = [float(reads_arr[reads_arr >= c].sum()) / r_tot for c in xs]
+            ax.plot(xs, ys, marker="o", markersize=2, color="#4C72B0")
+        ax.axvline(reads_cutoff, color="red", linestyle="--", linewidth=0.8)
+    else:
+        ax.text(0.5, 0.5, "No rows after k filter", ha="center", va="center", transform=ax.transAxes)
+    ax.set_xlabel("Reads Cutoff")
+    ax.set_ylabel("Frac. of Reads Retained")
+    ax.set_ylim(-0.02, 1.02)
+    ax.grid(True, alpha=0.3)
+    fig.tight_layout()
+    fig.savefig(diagnostics_dir / "qc_reads_cutoff_retention.png", dpi=150)
     plt.close(fig)
 
     fig, ax = plt.subplots(figsize=(4, 2.5))

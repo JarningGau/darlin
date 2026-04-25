@@ -10,13 +10,14 @@ from darlin.scrna.protocols import ScrnaProtocol
 from darlin.scrna.steps import step_annotate, step_denoise, step_extract, step_qc
 
 
-def resolve_scrna_primers(*, locus: str) -> tuple[str, str]:
+def resolve_scrna_primers(*, locus: str) -> tuple[int, str, str]:
     from darlinpy.config.amplicon_configs import load_carlin_config_by_locus  # type: ignore
 
     config = load_carlin_config_by_locus(locus=locus)
+    unedited_bc_len = len(config.carlin_sequence)
     p5_seq = config.sequence.primer5
     p3_seq = config.sequence.secondary_sequence + config.sequence.primer3
-    return p3_seq, p5_seq
+    return unedited_bc_len, p3_seq, p5_seq
 
 
 def resolve_max_reads(*, test: bool, sample_n: int | None) -> int | None:
@@ -64,7 +65,7 @@ def run_scrna_pipeline(
     logger.info("  Protocol: %s", protocol.name)
     logger.info("--------------------------------")
 
-    p3_seq, p5_seq = resolve_scrna_primers(locus=locus)
+    unedited_bc_len, p3_seq, p5_seq = resolve_scrna_primers(locus=locus)
     max_reads = resolve_max_reads(test=test, sample_n=sample_n)
 
     step_extract(
@@ -73,6 +74,7 @@ def run_scrna_pipeline(
         protocol=protocol,
         p3_seq=p3_seq,
         p5_seq=p5_seq,
+        unedited_bc_len=unedited_bc_len,
         paths=paths,
         logger=logger,
         max_reads=max_reads,

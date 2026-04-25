@@ -77,6 +77,7 @@ The pipeline writes the following standard outputs under `<output-dir>/<sample-i
 - `diagnostics/qc_reads_fraction_scatter.png`
 - `diagnostics/qc_reads_vs_umis.png`
 - `diagnostics/qc_k_cutoff_curve.png`
+- `diagnostics/qc_reads_cutoff_retention.png`
 - `diagnostics/qc_n_lr_per_cr_hist.png`
 
 ## Step-Wise Execution

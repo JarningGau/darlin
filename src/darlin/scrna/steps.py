@@ -21,6 +21,7 @@ def step_extract(
     protocol: ScrnaProtocol,
     p3_seq: str,
     p5_seq: str,
+    unedited_bc_len: int,
     paths: ScrnaPaths,
     logger: logging.Logger,
     max_reads: int | None,
@@ -65,7 +66,7 @@ def step_extract(
 
     df = pd.DataFrame(rows, columns=["LB", "CB", "UB", "LB_len"])
     df.to_csv(paths.extracted_tsv, sep="\t", index=False)
-    write_extract_plots(df, paths.diagnostics_dir)
+    write_extract_plots(df, paths.diagnostics_dir, unedited_bc_len=unedited_bc_len)
     logger.info(
         "Extract: reads_scanned=%s matched_reads=%s rows_written=%s skipped_barcode_with_N=%s skipped_no_unique_primer_pair=%s -> %s",
         total_reads if max_reads is None else min(total_reads, max_reads),
@@ -259,10 +260,9 @@ def step_qc(
     else:
         cell_summary["k"] = pd.Series(dtype=float)
 
-    df_final = df_major.merge(cell_summary[["CR", "k"]], on="CR", how="left")
-    df_final = df_final[
-        (df_final["k"] >= reads_umis_ratio_cutoff) & (df_final["reads"] >= reads_cutoff)
-    ].copy()
+    df_merged = df_major.merge(cell_summary[["CR", "k"]], on="CR", how="left")
+    df_after_k = df_merged[df_merged["k"] >= reads_umis_ratio_cutoff].copy()
+    df_final = df_after_k[df_after_k["reads"] >= reads_cutoff].copy()
     if len(df_final) > 0:
         df_final["n_LR"] = df_final.groupby("CR")["LR"].transform("nunique")
     else:
@@ -276,6 +276,8 @@ def step_qc(
         df_final,
         paths.diagnostics_dir,
         major_fraction_threshold_molecule=major_fraction_threshold_molecule,
+        df_after_k=df_after_k,
+        reads_cutoff=reads_cutoff,
     )
     logger.info(
         "QC: major_rows=%s final_rows=%s cells=%s -> %s",
