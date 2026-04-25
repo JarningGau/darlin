@@ -3,6 +3,7 @@ import subprocess
 import sys
 from pathlib import Path
 import pandas as pd
+import pytest
 
 
 def _run(*args: str) -> subprocess.CompletedProcess[str]:
@@ -353,7 +354,8 @@ def test_cli_scrna_annotate_produces_required_columns(tmp_path: Path) -> None:
     for column in ["CR", "LR", "UR", "reads", "mutations", "aligned_LR", "md5"]:
         assert column in df.columns
     grouped_df = pd.read_csv(grouped, sep="\t")
-    assert list(grouped_df.columns) == ["CR", "LR", "n_UMIs"]
+    assert list(grouped_df.columns) == ["n_UMIs", "CR", "LR", "mutation", "aligned_LR", "md5"]
+    assert not grouped_df.duplicated(subset=["CR", "LR"]).any()
     expected = (
         df.groupby(["CR", "LR"], as_index=False)["UR"]
         .nunique()
@@ -361,8 +363,22 @@ def test_cli_scrna_annotate_produces_required_columns(tmp_path: Path) -> None:
         .sort_values(["CR", "LR"])
         .reset_index(drop=True)
     )
-    observed = grouped_df.sort_values(["CR", "LR"]).reset_index(drop=True)
+    observed = grouped_df[["CR", "LR", "n_UMIs"]].sort_values(["CR", "LR"]).reset_index(drop=True)
     pd.testing.assert_frame_equal(observed, expected)
+
+
+def test_cli_scrna_grouped_output_requires_unique_lr_annotation_mapping() -> None:
+    from darlin.scrna.steps import _validate_grouped_annotation_uniqueness
+
+    df = pd.DataFrame(
+        [
+            {"LR": "AAA", "mutation": "m1", "aligned_LR": "alq1", "md5": "hash1"},
+            {"LR": "AAA", "mutation": "m2", "aligned_LR": "alq2", "md5": "hash2"},
+        ]
+    )
+
+    with pytest.raises(ValueError, match="Non-unique annotation mapping for LR"):
+        _validate_grouped_annotation_uniqueness(df)
 
 
 def test_cli_scrna_run_produces_outputs(tmp_path: Path) -> None:

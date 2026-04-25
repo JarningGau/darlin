@@ -294,6 +294,22 @@ def _concat_and_md5(aligned_query: str, aligned_ref: str) -> str:
     return hashlib.md5(concat.encode("utf-8")).hexdigest()
 
 
+def _serialize_mutation_value(value: object) -> str:
+    if isinstance(value, list):
+        return "[]" if len(value) == 0 else ";".join(str(item) for item in value)
+    return "[]" if pd.isna(value) else str(value)
+
+
+def _validate_grouped_annotation_uniqueness(source: pd.DataFrame) -> pd.DataFrame:
+    mapping = source[["LR", "mutation", "aligned_LR", "md5"]].drop_duplicates()
+    counts = mapping.groupby("LR", dropna=False).size()
+    bad_lrs = counts[counts > 1].index.tolist()
+    if bad_lrs:
+        preview = ", ".join(str(lr) for lr in bad_lrs[:5])
+        raise ValueError(f"Non-unique annotation mapping for LR: {preview}")
+    return mapping
+
+
 def step_annotate(
     *,
     qc_tsv: Path,
@@ -305,11 +321,21 @@ def step_annotate(
     from darlinpy import analyze_sequences  # type: ignore
 
     def _write_grouped_counts(final_df: pd.DataFrame) -> pd.DataFrame:
-        grouped = (
-            final_df.groupby(["CR", "LR"], as_index=False)["UR"]
-            .nunique()
-            .rename(columns={"UR": "n_UMIs"})
-        )
+        grouped_cols = ["n_UMIs", "CR", "LR", "mutation", "aligned_LR", "md5"]
+        source = final_df.rename(columns={"mutations": "mutation"})
+        source = source.copy()
+        source["mutation"] = source["mutation"].map(_serialize_mutation_value)
+        if source.empty:
+            grouped = pd.DataFrame(columns=grouped_cols)
+        else:
+            annotation_map = _validate_grouped_annotation_uniqueness(source)
+            grouped = (
+                source.groupby(["CR", "LR"], dropna=False, as_index=False)["UR"]
+                .nunique()
+                .rename(columns={"UR": "n_UMIs"})
+            )
+            grouped = grouped.merge(annotation_map, on="LR", how="left")
+            grouped = grouped[grouped_cols]
         grouped.to_csv(paths.numis_by_cell_and_lineage_tsv, sep="\t", index=False)
         return grouped
 
