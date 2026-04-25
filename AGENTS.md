@@ -8,6 +8,7 @@ Contributor guide for **darlin**, a Python 3.11 project managed with [Pixi](http
 - **Environment:** Pixi installs dependencies into `.pixi/` (ignored by Git except `.pixi/config.toml` if present).
 - **Data:** `data/` and `old/` are listed in `.gitignore`—keep large or sensitive datasets out of version control unless you intentionally add exceptions.
 - **Source & tests:** Put application code under a clear package name (e.g. `darlin/` or `src/darlin/`). Tests live under `tests/` with parallel module paths to the code they cover; larger or shared fixtures may sit under `tests/data/` (or similar) instead of the repo-root `data/` tree.
+- **Docs:** Keep command references in `docs/` aligned with CLI behavior, especially when output filenames or tabular output schemas change.
 
 ## Build, Test, and Development Commands
 
@@ -53,3 +54,4 @@ After adding `[tasks]` entries, document them in this file or in `README.md` so 
 - Read `pixi.toml` before suggesting dependencies or Python version changes.
 - Do not commit contents of `data/` or `.pixi/` unless the user explicitly wants them tracked.
 - Prefer adding Pixi **tasks** for repeatable commands instead of one-off shell instructions in docs alone.
+- When changing scRNA pipeline output schemas, update `tests/test_cli_scrna.py` and the relevant command docs together so the documented outputs stay synchronized with the CLI.

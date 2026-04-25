@@ -7,6 +7,7 @@ old/
 /temp/
 /output/
 /notebook/
+/jobs/
 
 # python bytecode / caches
 __pycache__/
@@ -21,4 +22,3 @@ htmlcov/
 build/
 dist/
 *.egg-info/
-
