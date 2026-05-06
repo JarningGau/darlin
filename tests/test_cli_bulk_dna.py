@@ -70,6 +70,9 @@ def test_cli_bulk_dna_run_pe85_r350_produces_outputs(tmp_path: Path) -> None:
     for p in [log_file, extracted, filtered, denoised_barcodes, annotated, alleles_tsv]:
         assert p.exists(), f"Expected output missing: {p}"
 
+    db = pd.read_csv(denoised_barcodes, sep="\t")
+    assert (db["query"].astype(str) == db["LR"].astype(str)).all()
+
     log_text = log_file.read_text()
     assert "Protocol: pe85-r350" in log_text
     assert "Extract (paired):" in log_text
@@ -146,6 +149,9 @@ def test_cli_bulk_dna_run_produces_outputs(tmp_path: Path) -> None:
 
     for p in [log_file, assembled_fastq, extracted, filtered, denoised_barcodes, annotated, alleles_tsv]:
         assert p.exists(), f"Expected output missing: {p}"
+
+    db = pd.read_csv(denoised_barcodes, sep="\t")
+    assert (db["query"].astype(str) == db["LR"].astype(str)).all()
 
     with alleles_tsv.open(newline="") as f:
         reader = csv.DictReader(f, delimiter="\t")

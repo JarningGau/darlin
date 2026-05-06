@@ -48,6 +48,7 @@ def step_extract(
     show_progress: bool = True,
 ) -> Path:
     import pandas as pd  # type: ignore
+    from Bio.Seq import Seq  # type: ignore
     from tqdm import tqdm  # type: ignore
 
     assembled_fastq = Path(assembled_fastq)
@@ -80,7 +81,7 @@ def step_extract(
             if len(match_result.p3_matches) == 1 and len(match_result.p5_matches) == 1:
                 s = match_result.p3_matches[0].end
                 e = match_result.p5_matches[0].start
-                lineage_bc = seq[s:e]
+                lineage_bc = str(Seq(seq[s:e]).reverse_complement())
                 results.append((lineage_bc, umi))
             else:
                 skipped_no_dual_match += 1
@@ -245,11 +246,9 @@ def step_denoise(
     )
     agg.to_csv(combo.denoised_agg_tsv, sep="\t", index=False)
 
-    from Bio.Seq import Seq  # type: ignore
-
     agg2 = agg.groupby("LR").size().reset_index(name="UMIs")
     agg2.sort_values(by="UMIs", ascending=False, inplace=True)
-    agg2["query"] = [str(Seq(s).reverse_complement()) for s in agg2["LR"].astype(str)]
+    agg2["query"] = agg2["LR"].astype(str)
     agg2.to_csv(combo.denoised_barcodes_tsv, sep="\t", index=False)
 
     logger.info(
@@ -277,7 +276,6 @@ def step_annotate(
     logger: logging.Logger,
 ) -> Path:
     import pandas as pd  # type: ignore
-    from Bio.Seq import Seq  # type: ignore
     from darlinpy import analyze_sequences  # type: ignore
 
     denoised_barcodes_tsv = Path(denoised_barcodes_tsv)
@@ -286,17 +284,15 @@ def step_annotate(
 
     agg2 = pd.read_csv(denoised_barcodes_tsv, sep="\t")
     if "query" not in agg2.columns:
-        sequences = agg2["LR"].astype(str).tolist()
-        sequences_rc = [str(Seq(s).reverse_complement()) for s in sequences]
-        agg2["query"] = sequences_rc
+        agg2["query"] = agg2["LR"].astype(str)
         agg2.to_csv(denoised_barcodes_tsv, sep="\t", index=False)
         logger.info(f"Added `query` column and updated: {denoised_barcodes_tsv}")
-    else:
-        sequences_rc = agg2["query"].astype(str).tolist()
 
-    n_queries = len(sequences_rc)
+    queries = agg2["query"].astype(str).tolist()
+
+    n_queries = len(queries)
     results_allele = analyze_sequences(
-        sequences_rc,
+        queries,
         config=locus,
         min_sequence_length=int(min_bc_len),
         verbose=False,
