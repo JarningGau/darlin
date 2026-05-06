@@ -50,6 +50,7 @@ darlin scrna run \
 | `--test` | off | Limit processing to approximately the first 2500 read pairs. |
 | `--sample-n` | unset | Limit processing to the first `N` read pairs. |
 | `--min-bc-len` | `20` | Minimum lineage-barcode length retained for denoise and annotate. |
+| `--fq1` / `--fq2` | required for `run`/`extract` | FASTQs for sequencer R1 and R2. The protocol decides which one is the barcode read. |
 
 ## Denoise and QC Arguments
 

@@ -37,6 +37,15 @@ darlin bulk run \
   --output-dir ./output \
   --threads 1
 
+# Bulk DNA (PE85r350)
+darlin bulk run \
+  --sample-id C126_CA \
+  --fq1 tests/data/bulkdna-f85r350/C126_CA_R1.fq.gz \
+  --fq2 tests/data/bulkdna-f85r350/C126_CA_R2.fq.gz \
+  --protocol pe85-r350 \ 
+  --output-dir ./output \
+  --threads 1
+
 # Bulk RNA (Rosa locus)
 darlin bulk run \
   --sample-id LL583_RA \
@@ -74,9 +83,9 @@ darlin scrna run \
 
 # Camellia
 darlin scrna run \
-  --sample-id LL837_CA \
-  --fq1 tests/data/sccamellia/LL837-skull-CA_1.fastq.gz \
-  --fq2 tests/data/sccamellia/LL837-skull-CA_2.fastq.gz \
+  --sample-id LL653_CA \
+  --fq1 tests/data/scCamellia/LL653-CA_L001_R1_001.fastq.gz \
+  --fq2 tests/data/scCamellia/LL653-CA_L001_R2_001.fastq.gz \
   --protocol camellia \
   --output-dir ./output \
   --sample-n 200

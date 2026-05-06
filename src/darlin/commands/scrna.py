@@ -53,8 +53,18 @@ def _add_common_scrna_args(
     p.add_argument("--sample-n", type=int, default=None, help="Process first N read pairs")
     p.add_argument("--min-bc-len", type=int, default=20, help="Minimum lineage barcode length")
     if include_fqs:
-        p.add_argument("--fq1", type=str, required=True, help="Path to barcode FASTQ file")
-        p.add_argument("--fq2", type=str, required=True, help="Path to cDNA FASTQ file")
+        p.add_argument(
+            "--fq1",
+            type=str,
+            required=True,
+            help="Path to sequencer Read 1 (R1) FASTQ (protocol determines whether this is the barcode read)",
+        )
+        p.add_argument(
+            "--fq2",
+            type=str,
+            required=True,
+            help="Path to sequencer Read 2 (R2) FASTQ (protocol determines whether this is the barcode read)",
+        )
 
 
 def _add_scrna_run(steps: argparse._SubParsersAction) -> None:
