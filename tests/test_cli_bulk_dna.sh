@@ -37,13 +37,28 @@ outdir="${tmp_out}/bulk_dna"
 #   --umi-ld 1 2  \
 #   --lb-hd-relative 0.01 0.02
 
+# python -m darlin.cli bulk run \
+#   --sample-id "${sample_id}" \
+#   --fq1 "${fq1}" \
+#   --fq2 "${fq2}" \
+#   --output-dir "${outdir}" \
+#   --threads 1 \
+#   --keep-pear \
+#   --locus Col1a1 \
+#   --umi-ld 1  \
+#   --lb-hd-relative 0.01 
+
+fq1="${ROOT_DIR}/tests/data/bulkdna-f85r350/C126_CA_R1.fq.gz"
+fq2="${ROOT_DIR}/tests/data/bulkdna-f85r350/C126_CA_R2.fq.gz"
+sample_id="C126_CA"
+
 python -m darlin.cli bulk run \
   --sample-id "${sample_id}" \
   --fq1 "${fq1}" \
   --fq2 "${fq2}" \
   --output-dir "${outdir}" \
   --threads 1 \
-  --keep-pear \
+  --protocol pe85-r350 \
   --locus Col1a1 \
   --umi-ld 1  \
   --lb-hd-relative 0.01 

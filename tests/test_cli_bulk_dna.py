@@ -23,6 +23,86 @@ def _run(*args: str) -> subprocess.CompletedProcess[str]:
     )
 
 
+def test_cli_bulk_dna_run_pe85_r350_produces_outputs(tmp_path: Path) -> None:
+    fq1 = Path("tests/data/bulkdna-f85r350/C126_CA_R1.fq.gz")
+    fq2 = Path("tests/data/bulkdna-f85r350/C126_CA_R2.fq.gz")
+    assert fq1.exists()
+    assert fq2.exists()
+
+    sample_id = "C126_CA"
+    outdir = tmp_path / "out"
+
+    r = _run(
+        "bulk",
+        "run",
+        "--sample-id",
+        sample_id,
+        "--protocol",
+        "pe85-r350",
+        "--fq1",
+        str(fq1),
+        "--fq2",
+        str(fq2),
+        "--output-dir",
+        str(outdir),
+        "--threads",
+        "1",
+        "--sample-n",
+        "200",
+    )
+    assert r.returncode == 0, f"stdout:\n{r.stdout}\n\nstderr:\n{r.stderr}"
+    assert "Traceback" not in r.stderr
+
+    sample_dir = outdir / sample_id
+    assert sample_dir.exists()
+
+    log_file = sample_dir / "run.log"
+    extracted = sample_dir / "extracted.tsv"
+    filtered = sample_dir / "filtered.tsv"
+    combo_dir = sample_dir / "reads_1_u_1_l_0.01"
+    denoised_barcodes = combo_dir / "denoised_barcodes.tsv"
+    annotated = combo_dir / "annotated.tsv"
+    alleles_tsv = combo_dir / "alleles_by_umis.tsv"
+
+    pear_assembled = sample_dir / "pear" / "pear.assembled.fastq"
+    assert not pear_assembled.exists()
+
+    for p in [log_file, extracted, filtered, denoised_barcodes, annotated, alleles_tsv]:
+        assert p.exists(), f"Expected output missing: {p}"
+
+    log_text = log_file.read_text()
+    assert "Protocol: pe85-r350" in log_text
+    assert "Extract (paired):" in log_text
+    assert "PEAR (skipped): protocol pe85-r350" in log_text
+
+
+def test_cli_bulk_run_pe85_r350_rejects_skip_pear(tmp_path: Path) -> None:
+    fq1 = Path("tests/data/bulkdna-f85r350/C126_CA_R1.fq.gz")
+    fq2 = Path("tests/data/bulkdna-f85r350/C126_CA_R2.fq.gz")
+    assert fq1.exists()
+    assert fq2.exists()
+
+    r = _run(
+        "bulk",
+        "run",
+        "--sample-id",
+        "C126_CA",
+        "--protocol",
+        "pe85-r350",
+        "--fq1",
+        str(fq1),
+        "--fq2",
+        str(fq2),
+        "--output-dir",
+        str(tmp_path / "out"),
+        "--skip-pear",
+        "--threads",
+        "1",
+    )
+    assert r.returncode == 1
+    assert "Traceback" not in r.stderr
+
+
 def test_cli_bulk_dna_run_produces_outputs(tmp_path: Path) -> None:
     fq1 = Path("tests/data/bulkdna/L141_CA_R1.fq.gz")
     fq2 = Path("tests/data/bulkdna/L141_CA_R2.fq.gz")

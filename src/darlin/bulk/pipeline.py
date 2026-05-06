@@ -9,6 +9,7 @@ from darlin.bulk.steps import (
     step_annotate_and_finalize,
     step_cleanup_pear,
     step_extract,
+    step_extract_paired,
     step_filter,
     step_pear,
 )
@@ -56,6 +57,17 @@ def resolve_bulk_primers(*, locus: str) -> tuple[int, str, str]:
     return unedited_bc_len, p3_rc, p5_rc
 
 
+def resolve_bulk_primers_paired(*, locus: str) -> tuple[int, str, str]:
+    """Forward P3 and P5 strings from darlinpy config for PE85+350 R2 primer matching."""
+    from darlinpy.config.amplicon_configs import load_carlin_config_by_locus  # type: ignore
+
+    config = load_carlin_config_by_locus(locus=locus)
+    unedited_bc_len = len(config.carlin_sequence)
+    p5_seq = config.sequence.primer5
+    p3_seq = config.sequence.secondary_sequence + config.sequence.primer3
+    return unedited_bc_len, p3_seq, p5_seq
+
+
 def _fmt_size(path: Path) -> str:
     """Human-readable file size, or '?' if the file is missing."""
     try:
@@ -77,6 +89,7 @@ def _build_replay_cmd(
     assembled_fq: str | None,
     output_dir: str,
     locus: str,
+    protocol: str,
     umi_len: int,
     min_bc_len: int,
     reads_cutoff: int,
@@ -96,6 +109,7 @@ def _build_replay_cmd(
         "--sample-id", sample_id,
         "--output-dir", str(output_dir),
         "--locus", locus,
+        "--protocol", protocol,
         "--umi-len", str(umi_len),
         "--min-bc-len", str(min_bc_len),
         "--reads-cutoff", str(reads_cutoff),
@@ -126,10 +140,10 @@ def _build_replay_cmd(
     return " ".join(parts)
 
 
-def _count_steps(skip_pear: bool, n_combos: int) -> int:
+def _count_steps(run_pear: bool, n_combos: int) -> int:
     """Return the total number of pipeline steps for progress labels."""
     # PEAR + Extract + Filter + (Denoise + Annotate) * n_combos
-    return (0 if skip_pear else 1) + 2 + 2 * n_combos
+    return (1 if run_pear else 0) + 2 + 2 * n_combos
 
 
 def _log_timing_summary(logger: logging.Logger, records: list[tuple[str, float]]) -> None:
@@ -181,7 +195,11 @@ def run_bulk_pipeline(
     test: bool = False,
     sample_n: int | None = None,
     show_progress: bool = True,
+    protocol: str = "pe250",
 ) -> int:
+    if protocol == "pe85-r350" and skip_pear:
+        raise ValueError("protocol pe85-r350 cannot be combined with --skip-pear")
+
     paths = get_bulk_paths(output_dir=output_dir, sample_id=sample_id)
     paths.ensure_dirs()
 
@@ -196,21 +214,38 @@ def run_bulk_pipeline(
 
     max_reads_effective = sample_n if sample_n is not None else (2500 if test else None)
 
+    run_pear = protocol == "pe250" and not skip_pear
+
     n_combos = len(umi_ld_list) * len(lb_hd_relative_list)
     timer = _StepTimer(logger)
-    timer.total_steps = _count_steps(skip_pear=skip_pear, n_combos=n_combos)
+    timer.total_steps = _count_steps(run_pear=run_pear, n_combos=n_combos)
 
     replay_cmd = _build_replay_cmd(
-        sample_id=sample_id, fq1=fq1, fq2=fq2, assembled_fq=assembled_fq, output_dir=output_dir,
-        locus=locus, umi_len=umi_len, min_bc_len=min_bc_len,
-        reads_cutoff=reads_cutoff, pear_path=pear_path, threads=threads,
-        log_level=log_level, skip_pear=skip_pear, keep_pear=keep_pear,
-        test=test, sample_n=sample_n, umi_ld_list=umi_ld_list,
-        lb_hd_relative_list=lb_hd_relative_list, show_progress=show_progress,
+        sample_id=sample_id,
+        fq1=fq1,
+        fq2=fq2,
+        assembled_fq=assembled_fq,
+        output_dir=output_dir,
+        locus=locus,
+        protocol=protocol,
+        umi_len=umi_len,
+        min_bc_len=min_bc_len,
+        reads_cutoff=reads_cutoff,
+        pear_path=pear_path,
+        threads=threads,
+        log_level=log_level,
+        skip_pear=skip_pear,
+        keep_pear=keep_pear,
+        test=test,
+        sample_n=sample_n,
+        umi_ld_list=umi_ld_list,
+        lb_hd_relative_list=lb_hd_relative_list,
+        show_progress=show_progress,
     )
 
     logger.info("--------------------------------")
     logger.info("Starting bulk pipeline for sample: %s", sample_id)
+    logger.info("  Protocol: %s", protocol)
     if fq1 is not None and fq2 is not None:
         logger.info("  Input R1: %s (%s)", Path(fq1).name, _fmt_size(Path(fq1)))
         logger.info("  Input R2: %s (%s)", Path(fq2).name, _fmt_size(Path(fq2)))
@@ -224,11 +259,15 @@ def run_bulk_pipeline(
     logger.debug("Run command (replay): %s", replay_cmd)
     logger.info("--------------------------------")
 
-    unedited_bc_len, p3_rc, p5_rc = resolve_bulk_primers(locus=locus)
+    if protocol == "pe85-r350":
+        unedited_bc_len, p3_fwd, p5_fwd = resolve_bulk_primers_paired(locus=locus)
+    else:
+        unedited_bc_len, p3_rc, p5_rc = resolve_bulk_primers(locus=locus)
 
-    if not skip_pear:
+    assembled: Path | None = None
+    if run_pear:
         if fq1 is None or fq2 is None:
-            raise ValueError("fq1 and fq2 are required when skip_pear is False")
+            raise ValueError("fq1 and fq2 are required when PEAR runs (protocol pe250 without --skip-pear)")
         timer.start("PEAR")
         assembled = step_pear(
             fq1=fq1,
@@ -238,24 +277,43 @@ def run_bulk_pipeline(
             threads=threads,
             logger=logger,
         )
-    else:
+    elif protocol == "pe250":
         assembled = Path(assembled_fq) if assembled_fq is not None else paths.assembled_fastq
         logger.info("PEAR (skipped)")
         if not assembled.exists():
             raise FileNotFoundError(f"Assembled FASTQ file not found: {assembled}")
+    else:
+        logger.info("PEAR (skipped): protocol pe85-r350 uses paired FASTQs without PEAR assembly")
 
     max_reads = max_reads_effective
     timer.start("Extract")
-    extracted_tsv = step_extract(
-        assembled_fastq=assembled,
-        umi_len=umi_len,
-        p3_seq=p3_rc,
-        p5_seq=p5_rc,
-        paths=paths,
-        max_reads=max_reads,
-        logger=logger,
-        show_progress=show_progress,
-    )
+    if protocol == "pe85-r350":
+        if fq1 is None or fq2 is None:
+            raise ValueError("fq1 and fq2 are required for protocol pe85-r350")
+        extracted_tsv = step_extract_paired(
+            fq1=fq1,
+            fq2=fq2,
+            umi_len=umi_len,
+            p3_seq=p3_fwd,
+            p5_seq=p5_fwd,
+            paths=paths,
+            max_reads=max_reads,
+            logger=logger,
+            show_progress=show_progress,
+        )
+    else:
+        if assembled is None:
+            raise RuntimeError("internal error: assembled FASTQ path missing for PE250 extract")
+        extracted_tsv = step_extract(
+            assembled_fastq=assembled,
+            umi_len=umi_len,
+            p3_seq=p3_rc,
+            p5_seq=p5_rc,
+            paths=paths,
+            max_reads=max_reads,
+            logger=logger,
+            show_progress=show_progress,
+        )
 
     timer.start("Filter")
     filtered_tsv = step_filter(

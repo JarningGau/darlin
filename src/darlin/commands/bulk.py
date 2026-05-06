@@ -48,6 +48,14 @@ def _bulk_main(_: argparse.Namespace) -> int:
 def _add_bulk_run(steps: argparse._SubParsersAction) -> None:
     p = steps.add_parser("run", help="Run the full bulk pipeline", formatter_class=HELP_FORMATTER)
     _add_common_bulk_args(p, include_fqs=True, require_fqs=False)
+    p.add_argument(
+        "--protocol",
+        type=str,
+        choices=["pe250", "pe85-r350"],
+        default="pe250",
+        help="Library layout: pe250 runs PEAR then extracts from assembled reads; "
+        "pe85-r350 extracts from paired R1/R2 without PEAR",
+    )
     p.add_argument("--skip-pear", action="store_true", help="Skip PEAR assembly and use an existing assembled FASTQ")
     p.add_argument(
         "--assembled-fq",
@@ -174,14 +182,37 @@ def _bulk_run(args: argparse.Namespace) -> int:
     paths = _get_bulk_paths_cli(args.output_dir, args.sample_id)
     if paths is None:
         return 1
+    protocol = str(args.protocol)
     try:
-        if args.skip_pear:
+        if protocol == "pe85-r350":
+            if args.skip_pear:
+                raise BulkInputError("--skip-pear cannot be used with --protocol pe85-r350")
+            if args.assembled_fq:
+                raise BulkInputError(
+                    "--assembled-fq is only valid with --skip-pear; protocol pe85-r350 uses paired FASTQs directly"
+                )
+            missing_fqs: list[str] = []
+            if not args.fq1:
+                missing_fqs.append("--fq1")
+            if not args.fq2:
+                missing_fqs.append("--fq2")
+            if missing_fqs:
+                raise BulkInputError(
+                    "Missing required input files for protocol pe85-r350:\n  " + ", ".join(missing_fqs)
+                )
+            require_readable_files(
+                [
+                    ("Forward reads (--fq1)", args.fq1),
+                    ("Reverse reads (--fq2)", args.fq2),
+                ]
+            )
+        elif args.skip_pear:
             assembled_fq = Path(args.assembled_fq) if args.assembled_fq else paths.assembled_fastq
             require_readable_files(
                 [("Assembled FASTQ (--assembled-fq or default pear output)", assembled_fq)]
             )
         else:
-            missing_fqs: list[str] = []
+            missing_fqs = []
             if not args.fq1:
                 missing_fqs.append("--fq1")
             if not args.fq2:
@@ -223,6 +254,7 @@ def _bulk_run(args: argparse.Namespace) -> int:
         test=bool(args.test),
         sample_n=args.sample_n,
         show_progress=not bool(args.no_progress),
+        protocol=protocol,
     )
 
 

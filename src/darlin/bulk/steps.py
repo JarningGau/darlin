@@ -6,7 +6,7 @@ import shutil
 from pathlib import Path
 
 from darlin.bulk.denoise import correct_lineage_and_umi
-from darlin.bulk.io import iter_fastq_raw, open_fastq_text
+from darlin.bulk.io import iter_fastq_paired, iter_fastq_raw, open_fastq_text
 from darlin.bulk.matching import find_all_matches, get_mm_dist
 from darlin.bulk.paths import BulkPaths, ComboPaths
 from darlin.bulk.pear import assemble_pe_reads
@@ -92,6 +92,80 @@ def step_extract(
     df.to_csv(out_tsv, sep="\t", index=False)
     logger.info(
         "Extract: reads_scanned=%s rows_written=%s skipped_umi_with_N=%s skipped_no_unique_primer_pair=%s -> %s",
+        read_count,
+        len(results),
+        skipped_umi_n,
+        skipped_no_dual_match,
+        out_tsv,
+    )
+    return out_tsv
+
+
+def step_extract_paired(
+    *,
+    fq1: str | Path,
+    fq2: str | Path,
+    umi_len: int,
+    p3_seq: str,
+    p5_seq: str,
+    paths: BulkPaths,
+    max_reads: int | None,
+    logger: logging.Logger,
+    show_progress: bool = True,
+) -> Path:
+    """
+    PE85+350 paired extraction: UMI from R1 5'; lineage barcode on R2 between P5 and P3 (forward primers).
+    """
+    import pandas as pd  # type: ignore
+    from tqdm import tqdm  # type: ignore
+
+    fq1 = Path(fq1)
+    fq2 = Path(fq2)
+    if not fq1.exists():
+        raise FileNotFoundError(f"R1 FASTQ not found: {fq1}")
+    if not fq2.exists():
+        raise FileNotFoundError(f"R2 FASTQ not found: {fq2}")
+
+    p3_mm = get_mm_dist(p3_seq)
+    p5_mm = get_mm_dist(p5_seq)
+
+    results: list[tuple[str, str]] = []
+    read_count = 0
+    skipped_umi_n = 0
+    skipped_no_dual_match = 0
+
+    with open_fastq_text(str(fq1)) as h1, open_fastq_text(str(fq2)) as h2:
+        for (_id1, seq1, _q1, _id2, seq2, _q2) in tqdm(
+            iter_fastq_paired(h1, h2),
+            desc="Processing reads",
+            unit_scale=True,
+            unit=" reads",
+            disable=not show_progress,
+        ):
+            if max_reads is not None and read_count >= max_reads:
+                break
+            read_count += 1
+            umi = seq1[:umi_len]
+            if "N" in umi:
+                skipped_umi_n += 1
+                continue
+            match_result = find_all_matches(seq2, p3_seq, p5_seq, p3_mm, p5_mm)
+            if len(match_result.p3_matches) == 1 and len(match_result.p5_matches) == 1:
+                s = match_result.p5_matches[0].end
+                e = match_result.p3_matches[0].start
+                lineage_bc = seq2[s:e]
+                results.append((lineage_bc, umi))
+            else:
+                skipped_no_dual_match += 1
+
+    df = pd.DataFrame(results, columns=["LB", "UB"])
+    df["LB_len"] = df["LB"].str.len()
+
+    out_tsv = paths.extracted_tsv
+    df.to_csv(out_tsv, sep="\t", index=False)
+    logger.info(
+        "Extract (paired): reads_scanned=%s rows_written=%s skipped_umi_with_N=%s "
+        "skipped_no_unique_primer_pair=%s -> %s",
         read_count,
         len(results),
         skipped_umi_n,

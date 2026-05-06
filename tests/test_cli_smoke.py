@@ -34,6 +34,12 @@ def test_bulk_run_help_mentions_no_progress() -> None:
     assert "--no-progress" in r.stdout
 
 
+def test_bulk_run_help_mentions_protocol() -> None:
+    r = _run("bulk", "run", "--help")
+    assert r.returncode == 0
+    assert "--protocol" in r.stdout
+
+
 def test_scrna_help_mentions_steps() -> None:
     r = _run("scrna", "--help")
     assert r.returncode == 0

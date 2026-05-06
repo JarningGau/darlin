@@ -1,14 +1,29 @@
 # Bulk Command Reference
 
-## Library Structure
-R1: UMI-primer3-DARLIN-primer5
-R2: primer5-DARLIN-primer3-UMI
+## Library structure
+
+### `--protocol pe250` (paired-end overlap assembly)
+
+Typical PE250-style libraries:
+
+- **R1:** UMI — primer3 — DARLIN — primer5  
+- **R2:** primer5 — DARLIN — primer3 — UMI  
+
+Reads are assembled with PEAR; extraction uses the assembled FASTQ.
+
+### `--protocol pe85-r350` (short R1 + long R2, no overlap)
+
+PE85+350 libraries do not merge with PEAR. Paired FASTQs are read directly:
+
+- **R1:** UMI at the 5′ end  
+- **R2:** primer5 — lineage insert — primer3 (primers matched as forward sequences from the `darlinpy` locus config)
 
 ## Overview
 
-The `darlin bulk` command group processes bulk DNA/RNA lineage-tracing data. The principal entrypoint is `darlin bulk run`, which executes the complete workflow:
+The `darlin bulk` command group processes bulk DNA/RNA lineage-tracing data. The principal entrypoint is `darlin bulk run`, which executes:
 
-`pear -> extract -> filter -> denoise -> annotate`
+- **`pe250`:** `pear -> extract -> filter -> denoise -> annotate`
+- **`pe85-r350`:** `extract (paired) -> filter -> denoise -> annotate` (PEAR is not run)
 
 Most routine analyses should use `run`. Individual subcommands are available for inspection, parameter tuning, or recovery from an interrupted run.
 
@@ -22,22 +37,22 @@ darlin bulk run \
   [options]
 ```
 
-### Required Arguments
+### Required arguments
 
 | Argument | Meaning |
 |----------|---------|
 | `--sample-id` | Sample identifier used for naming the output directory under `--output-dir`. Must be a single path segment (no `/` or `\`). |
-| `--fq1` | Forward FASTQ input for paired-end assembly. |
-| `--fq2` | Reverse FASTQ input for paired-end assembly. |
+| `--fq1` / `--fq2` | Paired FASTQs. Required for `pe250` (unless `--skip-pear`) and required for `pe85-r350`. |
 
-### General Input and Runtime Arguments
+### General input and runtime arguments
 
 | Argument | Default | Meaning |
 |----------|---------|---------|
+| `--protocol` | `pe250` | `pe250`: PEAR assembly then extract from assembled reads. `pe85-r350`: paired R1/R2 extraction without PEAR (see Library structure). |
 | `--output-dir` | `./output` | Base output directory. Results are written under `<output-dir>/<sample-id>/`. |
 | `--locus` | `Col1a1` | DARLIN locus name used to load the corresponding `darlinpy` amplicon configuration. |
-| `--pear-path` | `pear` | Path to the PEAR executable. |
-| `--threads` | `8` | Number of threads used during paired-end assembly. |
+| `--pear-path` | `pear` | Path to the PEAR executable (used only when PEAR runs). |
+| `--threads` | `8` | Number of threads passed to PEAR when PEAR runs (`pe250` without `--skip-pear`). |
 | `--log-level` | `INFO` | Logging verbosity. Accepted values are `DEBUG`, `INFO`, `WARNING`, and `ERROR`. |
 | `--no-progress` | off | Disable tqdm progress bars during extract/denoise (cleaner logs in batch or CI). |
 
@@ -63,24 +78,25 @@ When either `--umi-ld` or `--lb-hd-relative` is provided with multiple values, t
 
 The `lb-hd-relative` part is formatted with a stable 4-significant-digit general format (`g` conversion), e.g. `0.01` stays `0.01`, `0.0001` becomes `0.0001`.
 
-### PEAR Control
+### PEAR control (`pe250` only)
 
 | Argument | Default | Meaning |
 |----------|---------|---------|
-| `--skip-pear` | off | Reuse an existing assembled FASTQ at `<output-dir>/<sample-id>/pear/pear.assembled.fastq` instead of rerunning PEAR. |
+| `--skip-pear` | off | Reuse an existing assembled FASTQ at `<output-dir>/<sample-id>/pear/pear.assembled.fastq` instead of rerunning PEAR. Not valid with `--protocol pe85-r350`. |
 | `--keep-pear` | off | Preserve the intermediate `pear/` directory after the pipeline completes. By default it is removed. |
 
-### Read Subsampling
+### Read subsampling
 
 | Argument | Default | Meaning |
 |----------|---------|---------|
-| `--test` | off | Limit processing to approximately the first 2500 assembled reads. |
-| `--sample-n` | unset | Limit processing to the first `N` assembled reads. |
+| `--test` | off | Limit processing to approximately the first 2500 reads (`pe250`: assembled reads; `pe85-r350`: read pairs scanned). |
+| `--sample-n` | unset | Limit processing to the first `N` reads (`pe250`: assembled; `pe85-r350`: paired records). |
 
-## Parameter Interactions
+## Parameter interactions
 
 - `--sample-n` takes precedence over `--test`. If both are supplied, the explicit `N`-read limit is used.
-- `--skip-pear` requires the assembled FASTQ to be present at the expected location unless an individual subcommand accepts an explicit replacement path.
+- `--skip-pear` requires the assembled FASTQ to be present at the expected location unless an individual subcommand accepts an explicit replacement path. It cannot be combined with `--protocol pe85-r350`.
+- `--assembled-fq` is only meaningful with `--skip-pear` on `pe250`; it is rejected for `pe85-r350`.
 - `--reads-cutoff` is applied in the denoise step (not in `filter`) and appears in combo output-directory names.
 - `--umi-ld` and `--lb-hd-relative` define a parameter grid rather than a single joint setting when multiple values are supplied.
 
