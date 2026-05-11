@@ -307,16 +307,19 @@ def step_annotate(
     from darlin_core import analyze_sequences  # type: ignore
 
     def _write_grouped_counts(final_df: pd.DataFrame) -> pd.DataFrame:
-        grouped_cols = ["n_UMIs", "CR", "LR", "mutation", "aligned_LR", "aligned_ref"]
+        # grouped_cols = ["n_UMIs", "CR", "LR", "mutation", "aligned_LR", "aligned_ref"]
+        grouped_cols = ["n_UMIs", "CR", "mutation", "aligned_LR", "aligned_ref"]
         source = final_df.rename(columns={"mutations": "mutation"})
-        source = source.copy()
-        annotation_map = _validate_grouped_annotation_uniqueness(source)
+        # annotation_map = _validate_grouped_annotation_uniqueness(source)
+        # [note]
+        # LR -> mutation: many to one due to sequence or PCR errors
+        # darlin_core.analyze_sequences() is able to correct these errors
         grouped = (
-            source.groupby(["CR", "LR"], dropna=False, as_index=False)["UR"]
+            source.groupby(["CR", "mutation", "aligned_LR", "aligned_ref"], dropna=False, as_index=False)["UR"]
             .nunique()
             .rename(columns={"UR": "n_UMIs"})
         )
-        grouped = grouped.merge(annotation_map, on="LR", how="left")
+        # grouped = grouped.merge(annotation_map, on="LR", how="left")
         grouped = grouped[grouped_cols]
         grouped.to_csv(paths.numis_by_cell_and_lineage_tsv, sep="\t", index=False)
         return grouped

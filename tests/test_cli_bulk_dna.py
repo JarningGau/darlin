@@ -156,7 +156,7 @@ def test_cli_bulk_dna_run_produces_outputs(tmp_path: Path) -> None:
     with alleles_tsv.open(newline="") as f:
         reader = csv.DictReader(f, delimiter="\t")
         assert reader.fieldnames is not None
-        assert list(reader.fieldnames) == ["LR", "UMIs", "mutations", "aligned_query", "aligned_ref"]
+        assert list(reader.fieldnames) == ["LR", "UMIs", "mutation", "aligned_query", "aligned_ref"]
 
     log_text = log_file.read_text()
     assert "Starting bulk pipeline for sample: L141_CA" in log_text
@@ -346,11 +346,11 @@ def test_bulk_finalize_keeps_unannotated_rows_and_logs_counts(tmp_path: Path) ->
     aaa = final_df.loc[final_df["LR"] == "AAA"].iloc[0]
     ccc = final_df.loc[final_df["LR"] == "CCC"].iloc[0]
     assert int(aaa["UMIs"]) == 5
-    assert aaa["mutations"] == "mut1"
+    assert aaa["mutation"] == "mut1"
     assert aaa["aligned_query"] == "AQ1"
     assert aaa["aligned_ref"] == "AR1"
     assert int(ccc["UMIs"]) == 7
-    assert pd.isna(ccc["mutations"])
+    assert pd.isna(ccc["mutation"])
     assert pd.isna(ccc["aligned_query"])
     assert pd.isna(ccc["aligned_ref"])
     assert "confidence" not in final_df.columns

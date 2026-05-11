@@ -368,6 +368,8 @@ def step_finalize(
 
     keep_cols = ["LR", "UMIs", "mutations", "aligned_query", "aligned_ref"]
     out = final[[c for c in keep_cols if c in final.columns]].copy()
+    if "mutations" in out.columns:
+        out = out.rename(columns={"mutations": "mutation"})
 
     out.to_csv(combo.alleles_tsv, sep="\t", index=False)
     logger.info(

@@ -357,20 +357,27 @@ def test_cli_scrna_annotate_produces_required_columns(tmp_path: Path) -> None:
     assert list(grouped_df.columns) == [
         "n_UMIs",
         "CR",
-        "LR",
         "mutation",
         "aligned_LR",
         "aligned_ref",
     ]
-    assert not grouped_df.duplicated(subset=["CR", "LR"]).any()
+    assert not grouped_df.duplicated(
+        subset=["CR", "mutation", "aligned_LR", "aligned_ref"]
+    ).any()
+    source = df.rename(columns={"mutations": "mutation"})
     expected = (
-        df.groupby(["CR", "LR"], as_index=False)["UR"]
+        source.groupby(
+            ["CR", "mutation", "aligned_LR", "aligned_ref"],
+            dropna=False,
+            as_index=False,
+        )["UR"]
         .nunique()
         .rename(columns={"UR": "n_UMIs"})
-        .sort_values(["CR", "LR"])
-        .reset_index(drop=True)
     )
-    observed = grouped_df[["CR", "LR", "n_UMIs"]].sort_values(["CR", "LR"]).reset_index(drop=True)
+    expected = expected[["n_UMIs", "CR", "mutation", "aligned_LR", "aligned_ref"]]
+    sort_cols = ["CR", "mutation", "aligned_LR", "aligned_ref"]
+    observed = grouped_df.sort_values(sort_cols).reset_index(drop=True)
+    expected = expected.sort_values(sort_cols).reset_index(drop=True)
     pd.testing.assert_frame_equal(observed, expected)
 
 
