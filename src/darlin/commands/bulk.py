@@ -134,7 +134,7 @@ def _add_bulk_denoise(steps: argparse._SubParsersAction) -> None:
 def _add_bulk_annotate(steps: argparse._SubParsersAction) -> None:
     p = steps.add_parser(
         "annotate",
-        help="Annotate alleles (darlinpy) and write alleles_by_umis.tsv",
+        help="Annotate alleles (darlin_core) and write alleles_by_umis.tsv",
         formatter_class=HELP_FORMATTER,
     )
     _add_common_bulk_args(p, include_fqs=False)
@@ -159,7 +159,7 @@ def _add_common_bulk_args(
 ) -> None:
     p.add_argument("--sample-id", type=str, required=True, help="Sample ID for output directory naming")
     p.add_argument("--output-dir", type=str, default="./output", help="Base output directory")
-    p.add_argument("--locus", type=str, default="Col1a1", help="Locus name (darlinpy config key)")
+    p.add_argument("--locus", type=str, default="Col1a1", help="Locus name (darlin-core config key)")
     p.add_argument("--umi-len", type=int, default=12, help="UMI length")
     p.add_argument("--min-bc-len", type=int, default=20, help="Minimum barcode length")
     if include_reads_cutoff:

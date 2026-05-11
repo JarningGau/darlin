@@ -315,8 +315,9 @@ def test_bulk_finalize_drops_unannotated_queries_and_logs_counts(tmp_path: Path)
         [
             {
                 "query": "good_query",
+                "query_len": 3,
+                "scores": 42.0,
                 "mutations": "mut1",
-                "confidence": 0.9,
                 "aligned_query": "AQ1",
                 "aligned_ref": "AR1",
             }
@@ -346,6 +347,7 @@ def test_bulk_finalize_drops_unannotated_queries_and_logs_counts(tmp_path: Path)
     assert final_df["LR"].tolist() == ["AAA"]
     assert final_df["UMIs"].tolist() == [5]
     assert final_df["mutations"].tolist() == ["mut1"]
+    assert "confidence" not in final_df.columns
 
     log_text = log_stream.getvalue()
     assert "unannotated_queries_dropped=1" in log_text

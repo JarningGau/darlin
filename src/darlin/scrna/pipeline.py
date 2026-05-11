@@ -11,7 +11,7 @@ from darlin.scrna.steps import step_annotate, step_denoise, step_extract, step_q
 
 
 def resolve_scrna_primers(*, locus: str) -> tuple[int, str, str]:
-    from darlinpy.config.amplicon_configs import load_carlin_config_by_locus  # type: ignore
+    from darlin_core.config.amplicon_configs import load_carlin_config_by_locus  # type: ignore
 
     config = load_carlin_config_by_locus(locus=locus)
     unedited_bc_len = len(config.carlin_sequence)

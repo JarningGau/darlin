@@ -42,7 +42,7 @@ darlin scrna run \
 |----------|---------|---------|
 | `--sample-id` | required | Sample identifier used for naming the output directory under `--output-dir`. |
 | `--output-dir` | `./output` | Base output directory. Results are written under `<output-dir>/<sample-id>/`. |
-| `--locus` | `Col1a1` | DARLIN locus name used to load the corresponding `darlinpy` amplicon configuration. |
+| `--locus` | `Col1a1` | DARLIN locus name used to load the corresponding `darlin-core` amplicon configuration. |
 | `--protocol` | `10xv3` | Single-cell protocol preset. |
 | `--whitelist` | protocol default | Override the protocol default whitelist path. |
 | `--log-level` | `INFO` | Logging verbosity. Accepted values are `DEBUG`, `INFO`, `WARNING`, and `ERROR`. |

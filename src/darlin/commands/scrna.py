@@ -38,7 +38,7 @@ def _add_common_scrna_args(
 ) -> None:
     p.add_argument("--sample-id", type=str, required=True, help="Sample ID for output directory naming")
     p.add_argument("--output-dir", type=str, default="./output", help="Base output directory")
-    p.add_argument("--locus", type=str, default="Col1a1", help="Locus name (darlinpy config key)")
+    p.add_argument("--locus", type=str, default="Col1a1", help="Locus name (darlin-core config key)")
     p.add_argument("--protocol", type=str, default="10xv3", help="Single-cell protocol preset")
     p.add_argument("--whitelist", type=str, default=None, help="Override protocol default whitelist path")
     p.add_argument(

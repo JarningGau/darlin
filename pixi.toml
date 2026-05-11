@@ -24,4 +24,4 @@ pip = ">=26.0.1,<27"
 scipy = "1.13.1.*"
 
 [pypi-dependencies]
-darlinpy = { git = "https://github.com/JarningGau/darlinpy", rev = "ff75334" }
+darlin-core = { git = "https://github.com/JarningGau/darlin-core", rev = "103119a" }

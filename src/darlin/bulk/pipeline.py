@@ -46,7 +46,7 @@ class _StepTimer:
 def resolve_bulk_primers(*, locus: str) -> tuple[int, str, str]:
     # Lazy imports: do not break `--help` when optional deps missing.
     from Bio.Seq import Seq  # type: ignore
-    from darlinpy.config.amplicon_configs import load_carlin_config_by_locus  # type: ignore
+    from darlin_core.config.amplicon_configs import load_carlin_config_by_locus  # type: ignore
 
     config = load_carlin_config_by_locus(locus=locus)
     unedited_bc_len = len(config.carlin_sequence)
@@ -58,8 +58,8 @@ def resolve_bulk_primers(*, locus: str) -> tuple[int, str, str]:
 
 
 def resolve_bulk_primers_paired(*, locus: str) -> tuple[int, str, str]:
-    """Forward P3 and P5 strings from darlinpy config for PE85+350 R2 primer matching."""
-    from darlinpy.config.amplicon_configs import load_carlin_config_by_locus  # type: ignore
+    """Forward P3 and P5 strings from darlin_core config for PE85+350 R2 primer matching."""
+    from darlin_core.config.amplicon_configs import load_carlin_config_by_locus  # type: ignore
 
     config = load_carlin_config_by_locus(locus=locus)
     unedited_bc_len = len(config.carlin_sequence)

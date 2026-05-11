@@ -318,7 +318,7 @@ def step_annotate(
     paths: ScrnaPaths,
     logger: logging.Logger,
 ) -> pd.DataFrame:
-    from darlinpy import analyze_sequences  # type: ignore
+    from darlin_core import analyze_sequences  # type: ignore
 
     def _write_grouped_counts(final_df: pd.DataFrame) -> pd.DataFrame:
         grouped_cols = ["n_UMIs", "CR", "LR", "mutation", "aligned_LR", "md5"]
