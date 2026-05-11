@@ -72,7 +72,8 @@ The pipeline writes the following standard outputs under `<output-dir>/<sample-i
 - `denoised.tsv`
 - `qc.tsv`
 - `cell_summary.tsv`
-- `annotated.tsv`
+- `annotated.tsv` (columns include `CR`, `LR`, `UR`, `reads`, `mutations`, `aligned_LR`, `aligned_ref`)
+- `nUMIs_by_cell_and_lineage.tsv` (columns `n_UMIs`, `CR`, `LR`, `mutation`, `aligned_LR`, `aligned_ref`)
 - `diagnostics/extract_lb_length.png`
 - `diagnostics/qc_reads_fraction_hist.png`
 - `diagnostics/qc_reads_fraction_scatter.png`

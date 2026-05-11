@@ -156,9 +156,7 @@ def test_cli_bulk_dna_run_produces_outputs(tmp_path: Path) -> None:
     with alleles_tsv.open(newline="") as f:
         reader = csv.DictReader(f, delimiter="\t")
         assert reader.fieldnames is not None
-        assert "md5" in reader.fieldnames
-        assert "LR" in reader.fieldnames
-        assert "UMIs" in reader.fieldnames
+        assert list(reader.fieldnames) == ["LR", "UMIs", "mutations", "aligned_query", "aligned_ref"]
 
     log_text = log_file.read_text()
     assert "Starting bulk pipeline for sample: L141_CA" in log_text
@@ -295,7 +293,7 @@ def test_bulk_extract_help_no_longer_mentions_skip_pear() -> None:
     assert "--skip-pear" not in r.stdout
 
 
-def test_bulk_finalize_drops_unannotated_queries_and_logs_counts(tmp_path: Path) -> None:
+def test_bulk_finalize_keeps_unannotated_rows_and_logs_counts(tmp_path: Path) -> None:
     combo = ComboPaths(
         dir=tmp_path / "reads_1_u_1_l_0.01",
         denoised_agg_tsv=tmp_path / "reads_1_u_1_l_0.01" / "denoised_agg.tsv",
@@ -343,13 +341,21 @@ def test_bulk_finalize_drops_unannotated_queries_and_logs_counts(tmp_path: Path)
     )
 
     final_df = pd.read_csv(combo.alleles_tsv, sep="\t")
-    assert len(final_df) == 1
-    assert final_df["LR"].tolist() == ["AAA"]
-    assert final_df["UMIs"].tolist() == [5]
-    assert final_df["mutations"].tolist() == ["mut1"]
+    assert len(final_df) == 2
+    assert set(final_df["LR"]) == {"AAA", "CCC"}
+    aaa = final_df.loc[final_df["LR"] == "AAA"].iloc[0]
+    ccc = final_df.loc[final_df["LR"] == "CCC"].iloc[0]
+    assert int(aaa["UMIs"]) == 5
+    assert aaa["mutations"] == "mut1"
+    assert aaa["aligned_query"] == "AQ1"
+    assert aaa["aligned_ref"] == "AR1"
+    assert int(ccc["UMIs"]) == 7
+    assert pd.isna(ccc["mutations"])
+    assert pd.isna(ccc["aligned_query"])
+    assert pd.isna(ccc["aligned_ref"])
     assert "confidence" not in final_df.columns
 
     log_text = log_stream.getvalue()
-    assert "unannotated_queries_dropped=1" in log_text
-    assert "input_queries=2" in log_text
-    assert "annotated_queries=1" in log_text
+    assert "merged_rows=2" in log_text
+    assert "rows_with_aligned_query_ref=1" in log_text
+    assert "output_rows=2" in log_text

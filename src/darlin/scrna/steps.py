@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import hashlib
 import logging
 from pathlib import Path
 
@@ -161,11 +160,10 @@ def _collapse_within_hd(items: list[tuple[str, int]], *, max_hd: int) -> dict[st
     return mapping
 
 
-def _correct_lb_per_molecule(
+def _correct_lb_per_cell(
     df: pd.DataFrame,
     *,
     cr_col: str,
-    ur_col: str,
     lb_col: str,
     lb_len_col: str,
     count_col: str,
@@ -174,7 +172,7 @@ def _correct_lb_per_molecule(
 ) -> pd.DataFrame:
     corrected: list[pd.DataFrame] = []
 
-    for (_cr, _ur, lb_len), sub in df.groupby([cr_col, ur_col, lb_len_col], sort=False):
+    for (_cr, lb_len), sub in df.groupby([cr_col, lb_len_col], sort=False):
         counts = sub.groupby(lb_col)[count_col].sum()
         if counts.empty:
             corrected.append(sub)
@@ -213,10 +211,9 @@ def step_denoise(
     df = df.groupby(["LB", "CB", "UB", "CR", "LB_len"], as_index=False)["reads"].sum()
 
     df = _correct_umis_per_cell(df, cb_col="CR", umi_col="UB", count_col="reads", threshold=umi_ld)
-    df = _correct_lb_per_molecule(
+    df = _correct_lb_per_cell(
         df,
         cr_col="CR",
-        ur_col="UR",
         lb_col="LB",
         lb_len_col="LB_len",
         count_col="reads",
@@ -289,19 +286,8 @@ def step_qc(
     return df_final, cell_summary
 
 
-def _concat_and_md5(aligned_query: str, aligned_ref: str) -> str:
-    concat = str(aligned_query) + str(aligned_ref)
-    return hashlib.md5(concat.encode("utf-8")).hexdigest()
-
-
-def _serialize_mutation_value(value: object) -> str:
-    if isinstance(value, list):
-        return "[]" if len(value) == 0 else ";".join(str(item) for item in value)
-    return "[]" if pd.isna(value) else str(value)
-
-
 def _validate_grouped_annotation_uniqueness(source: pd.DataFrame) -> pd.DataFrame:
-    mapping = source[["LR", "mutation", "aligned_LR", "md5"]].drop_duplicates()
+    mapping = source[["LR", "mutation", "aligned_LR", "aligned_ref"]].drop_duplicates()
     counts = mapping.groupby("LR", dropna=False).size()
     bad_lrs = counts[counts > 1].index.tolist()
     if bad_lrs:
@@ -321,41 +307,24 @@ def step_annotate(
     from darlin_core import analyze_sequences  # type: ignore
 
     def _write_grouped_counts(final_df: pd.DataFrame) -> pd.DataFrame:
-        grouped_cols = ["n_UMIs", "CR", "LR", "mutation", "aligned_LR", "md5"]
+        grouped_cols = ["n_UMIs", "CR", "LR", "mutation", "aligned_LR", "aligned_ref"]
         source = final_df.rename(columns={"mutations": "mutation"})
         source = source.copy()
-        source["mutation"] = source["mutation"].map(_serialize_mutation_value)
-        if source.empty:
-            grouped = pd.DataFrame(columns=grouped_cols)
-        else:
-            annotation_map = _validate_grouped_annotation_uniqueness(source)
-            grouped = (
-                source.groupby(["CR", "LR"], dropna=False, as_index=False)["UR"]
-                .nunique()
-                .rename(columns={"UR": "n_UMIs"})
-            )
-            grouped = grouped.merge(annotation_map, on="LR", how="left")
-            grouped = grouped[grouped_cols]
+        annotation_map = _validate_grouped_annotation_uniqueness(source)
+        grouped = (
+            source.groupby(["CR", "LR"], dropna=False, as_index=False)["UR"]
+            .nunique()
+            .rename(columns={"UR": "n_UMIs"})
+        )
+        grouped = grouped.merge(annotation_map, on="LR", how="left")
+        grouped = grouped[grouped_cols]
         grouped.to_csv(paths.numis_by_cell_and_lineage_tsv, sep="\t", index=False)
         return grouped
 
     df = pd.read_csv(qc_tsv, sep="\t")
     query = df["LR"].dropna().astype(str).drop_duplicates().tolist()
     if not query:
-        final_df = df.reindex(columns=["CR", "LR", "UR", "reads"]).copy()
-        final_df["mutations"] = pd.Series(dtype=object)
-        final_df["aligned_LR"] = pd.Series(dtype=object)
-        final_df["md5"] = pd.Series(dtype=str)
-        final_df = final_df[["CR", "LR", "UR", "reads", "mutations", "aligned_LR", "md5"]]
-        final_df.to_csv(paths.annotated_tsv, sep="\t", index=False)
-        grouped = _write_grouped_counts(final_df)
-        logger.info(
-            "Annotate: analyzed_queries=0 rows_written=0 grouped_rows=%s -> %s | %s",
-            len(grouped),
-            paths.annotated_tsv,
-            paths.numis_by_cell_and_lineage_tsv,
-        )
-        return final_df
+        raise ValueError(f"No lineage barcodes found in QC output: {qc_tsv}")
 
     results = analyze_sequences(
         query,
@@ -364,8 +333,7 @@ def step_annotate(
         verbose=False,
     ).to_df()
     merged = df.merge(results, left_on="LR", right_on="query", how="left")
-    merged["md5"] = merged.apply(lambda row: _concat_and_md5(row["aligned_query"], row["aligned_ref"]), axis=1)
-    final_df = merged[["CR", "LR", "UR", "reads", "mutations", "aligned_query", "md5"]].copy()
+    final_df = merged[["CR", "LR", "UR", "reads", "mutations", "aligned_query", "aligned_ref"]].copy()
     final_df = final_df.rename(columns={"aligned_query": "aligned_LR"})
     final_df.to_csv(paths.annotated_tsv, sep="\t", index=False)
     grouped = _write_grouped_counts(final_df)

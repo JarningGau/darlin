@@ -351,10 +351,17 @@ def test_cli_scrna_annotate_produces_required_columns(tmp_path: Path) -> None:
     assert annotated.exists()
     assert grouped.exists()
     df = pd.read_csv(annotated, sep="\t")
-    for column in ["CR", "LR", "UR", "reads", "mutations", "aligned_LR", "md5"]:
+    for column in ["CR", "LR", "UR", "reads", "mutations", "aligned_LR", "aligned_ref"]:
         assert column in df.columns
     grouped_df = pd.read_csv(grouped, sep="\t")
-    assert list(grouped_df.columns) == ["n_UMIs", "CR", "LR", "mutation", "aligned_LR", "md5"]
+    assert list(grouped_df.columns) == [
+        "n_UMIs",
+        "CR",
+        "LR",
+        "mutation",
+        "aligned_LR",
+        "aligned_ref",
+    ]
     assert not grouped_df.duplicated(subset=["CR", "LR"]).any()
     expected = (
         df.groupby(["CR", "LR"], as_index=False)["UR"]
@@ -372,8 +379,8 @@ def test_cli_scrna_grouped_output_requires_unique_lr_annotation_mapping() -> Non
 
     df = pd.DataFrame(
         [
-            {"LR": "AAA", "mutation": "m1", "aligned_LR": "alq1", "md5": "hash1"},
-            {"LR": "AAA", "mutation": "m2", "aligned_LR": "alq2", "md5": "hash2"},
+            {"LR": "AAA", "mutation": "m1", "aligned_LR": "alq1", "aligned_ref": "ref1"},
+            {"LR": "AAA", "mutation": "m2", "aligned_LR": "alq2", "aligned_ref": "ref2"},
         ]
     )
 
