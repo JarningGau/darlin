@@ -369,13 +369,15 @@ def step_finalize(
     annotated_mask = final["aligned_query"].notna() & final["aligned_ref"].notna()
     dropped_unannotated = int((~annotated_mask).sum())
     final = final[annotated_mask].copy()
-    keep_cols = ["query", "UMIs", "mutations", "confidence", "aligned_query", "aligned_ref"]
+    keep_cols = ["query", "LR", "UMIs", "mutations", "confidence", "aligned_query", "aligned_ref"]
     final = final[[c for c in keep_cols if c in final.columns]].copy()
 
     if final.empty:
         final2 = final.drop(columns=["query"], errors="ignore").copy()
         final2["md5"] = pd.Series(dtype=str)
-        final2 = final2.reindex(columns=["md5", "UMIs", "mutations", "confidence", "aligned_query", "aligned_ref"])
+        final2 = final2.reindex(
+            columns=["md5", "LR", "UMIs", "mutations", "confidence", "aligned_query", "aligned_ref"]
+        )
     else:
         final["md5"] = final.apply(lambda r: _concat_and_md5(r["aligned_query"], r["aligned_ref"]), axis=1)
         final2 = (
@@ -383,6 +385,7 @@ def step_finalize(
             .groupby("md5", as_index=False)
             .agg(
                 {
+                    "LR": "first",
                     "UMIs": "sum",
                     "mutations": "first",
                     "confidence": "first",
@@ -392,6 +395,9 @@ def step_finalize(
             )
             .sort_values(by="UMIs", ascending=False)
             .reset_index(drop=True)
+        )
+        final2 = final2.reindex(
+            columns=["md5", "LR", "UMIs", "mutations", "confidence", "aligned_query", "aligned_ref"]
         )
 
     final2.to_csv(combo.alleles_tsv, sep="\t", index=False)

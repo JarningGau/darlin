@@ -157,6 +157,7 @@ def test_cli_bulk_dna_run_produces_outputs(tmp_path: Path) -> None:
         reader = csv.DictReader(f, delimiter="\t")
         assert reader.fieldnames is not None
         assert "md5" in reader.fieldnames
+        assert "LR" in reader.fieldnames
         assert "UMIs" in reader.fieldnames
 
     log_text = log_file.read_text()
@@ -342,6 +343,7 @@ def test_bulk_finalize_drops_unannotated_queries_and_logs_counts(tmp_path: Path)
 
     final_df = pd.read_csv(combo.alleles_tsv, sep="\t")
     assert len(final_df) == 1
+    assert final_df["LR"].tolist() == ["AAA"]
     assert final_df["UMIs"].tolist() == [5]
     assert final_df["mutations"].tolist() == ["mut1"]
 
