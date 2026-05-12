@@ -144,7 +144,7 @@ darlin/
 |---------|---------|---------|
 | `pear` | bioconda | Paired-end read assembler (bulk pipeline) |
 | `umi_tools` | bioconda | UMI deduplication utilities |
-| `darlin-core` | PyPI (git) | DARLIN amplicon annotation engine |
+| [darlin-core](https://github.com/JarningGau/darlin-core) | PyPI (git) | DARLIN amplicon annotation engine |
 | `biopython` | conda-forge | Sequence I/O |
 | `pandas` | conda-forge | Tabular data processing |
 
