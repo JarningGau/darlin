@@ -1,0 +1,33 @@
+import os
+
+sample_dict = {
+	'LL583_Gr_bulk_RNA_TA': {
+		"fq1": "raw_fastq/LL583-Gr-3A_S10_L001_R1_001.fastq.gz",
+		"fq2": "raw_fastq/LL583-Gr-3A_S10_L001_R2_001.fastq.gz",
+		"assembled_fq": "output/LL583_Gr_bulk_RNA_CA/pear/pear.assembled.fastq",
+	},
+	'LL584_Gr_bulk_RNA_TA': {
+		"fq1": "raw_fastq/LL584-Gr-3A_S11_L001_R1_001.fastq.gz",
+		"fq2": "raw_fastq/LL584-Gr-3A_S11_L001_R2_001.fastq.gz",
+		"assembled_fq": "output/LL584_Gr_bulk_RNA_CA/pear/pear.assembled.fastq",
+	},
+	'LL638_Gr_bulk_RNA_TA': {
+		"fq1": "raw_fastq/LL638-Gr-3A_S12_L001_R1_001.fastq.gz",
+		"fq2": "raw_fastq/LL638-Gr-3A_S12_L001_R2_001.fastq.gz",
+		"assembled_fq": "output/LL638_Gr_bulk_RNA_CA/pear/pear.assembled.fastq",
+	}
+}
+
+for sample_id, fq in sample_dict.items():
+	cmd = f'darlin bulk run \
+		--sample-id {sample_id} \
+		--fq1 {fq["fq1"]} \
+		--fq2 {fq["fq2"]} \
+		--output-dir ./output \
+		--locus Tigre \
+		--reads-cutoff 1 2 \
+		--umi-ld 1 \
+		--skip-pear \
+		--assembled-fq {fq["assembled_fq"]} \
+		--umi-len 14'
+	os.system(cmd)
