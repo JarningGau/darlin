@@ -92,7 +92,7 @@ def _build_replay_cmd(
     protocol: str,
     umi_len: int,
     min_bc_len: int,
-    reads_cutoff: int,
+    reads_cutoff_list: list[int],
     pear_path: str,
     threads: int,
     log_level: str,
@@ -112,11 +112,12 @@ def _build_replay_cmd(
         "--protocol", protocol,
         "--umi-len", str(umi_len),
         "--min-bc-len", str(min_bc_len),
-        "--reads-cutoff", str(reads_cutoff),
         "--pear-path", pear_path,
         "--threads", str(threads),
         "--log-level", log_level,
     ]
+    parts.append("--reads-cutoff")
+    parts.extend(str(v) for v in reads_cutoff_list)
     if fq1 is not None:
         parts.extend(["--fq1", fq1])
     if fq2 is not None:
@@ -185,7 +186,7 @@ def run_bulk_pipeline(
     pear_path: str = "pear",
     threads: int = 8,
     min_bc_len: int = 20,
-    reads_cutoff: int = 1,
+    reads_cutoff_list: list[int] | None = None,
     denoise_iter: int = 1,
     umi_ld_list: list[int] | None = None,
     lb_hd_relative_list: list[float] | None = None,
@@ -211,12 +212,14 @@ def run_bulk_pipeline(
         umi_ld_list = [1]
     if not lb_hd_relative_list:
         lb_hd_relative_list = [0.01]
+    if not reads_cutoff_list:
+        reads_cutoff_list = [1]
 
     max_reads_effective = sample_n if sample_n is not None else (2500 if test else None)
 
     run_pear = protocol == "pe250" and not skip_pear
 
-    n_combos = len(umi_ld_list) * len(lb_hd_relative_list)
+    n_combos = len(reads_cutoff_list) * len(umi_ld_list) * len(lb_hd_relative_list)
     timer = _StepTimer(logger)
     timer.total_steps = _count_steps(run_pear=run_pear, n_combos=n_combos)
 
@@ -230,7 +233,7 @@ def run_bulk_pipeline(
         protocol=protocol,
         umi_len=umi_len,
         min_bc_len=min_bc_len,
-        reads_cutoff=reads_cutoff,
+        reads_cutoff_list=reads_cutoff_list,
         pear_path=pear_path,
         threads=threads,
         log_level=log_level,
@@ -324,56 +327,57 @@ def run_bulk_pipeline(
     )
 
     combo_allele_paths: list[Path] = []
-    for umi_ld in umi_ld_list:
-        for lb_rel in lb_hd_relative_list:
-            combo = paths.combo_paths(reads_cutoff=reads_cutoff, umi_ld=umi_ld, lb_hd_relative=lb_rel)
-            combo.ensure_dir()
+    for reads_cutoff in reads_cutoff_list:
+        for umi_ld in umi_ld_list:
+            for lb_rel in lb_hd_relative_list:
+                combo = paths.combo_paths(reads_cutoff=reads_cutoff, umi_ld=umi_ld, lb_hd_relative=lb_rel)
+                combo.ensure_dir()
 
-            from darlin.bulk.plots import write_post_denoise_plots, write_post_finalize_plots, write_pre_denoise_plots
-            from darlin.bulk.steps import step_denoise  # lazy import
+                from darlin.bulk.plots import write_post_denoise_plots, write_post_finalize_plots, write_pre_denoise_plots
+                from darlin.bulk.steps import step_denoise  # lazy import
 
-            combo_label = f"reads_cutoff={reads_cutoff}, umi_ld={umi_ld}, lb_hd_relative={lb_rel}"
-            timer.start(f"Denoise ({combo_label})")
-            write_pre_denoise_plots(
-                filtered_tsv=filtered_tsv,
-                out_dir=combo.dir,
-                reads_cutoff=reads_cutoff,
-                unedited_bc_len=unedited_bc_len,
-                logger=logger,
-            )
-            _denoised_agg_tsv, denoised_barcodes_tsv = step_denoise(
-                filtered_tsv=filtered_tsv,
-                reads_cutoff=reads_cutoff,
-                denoise_iter=denoise_iter,
-                umi_ld=umi_ld,
-                lb_hd_relative=lb_rel,
-                combo=combo,
-                logger=logger,
-                show_progress=show_progress,
-            )
-            write_post_denoise_plots(
-                denoised_agg_tsv=combo.denoised_agg_tsv,
-                out_dir=combo.dir,
-                unedited_bc_len=unedited_bc_len,
-                logger=logger,
-            )
+                combo_label = f"reads_cutoff={reads_cutoff}, umi_ld={umi_ld}, lb_hd_relative={lb_rel}"
+                timer.start(f"Denoise ({combo_label})")
+                write_pre_denoise_plots(
+                    filtered_tsv=filtered_tsv,
+                    out_dir=combo.dir,
+                    reads_cutoff=reads_cutoff,
+                    unedited_bc_len=unedited_bc_len,
+                    logger=logger,
+                )
+                _denoised_agg_tsv, denoised_barcodes_tsv = step_denoise(
+                    filtered_tsv=filtered_tsv,
+                    reads_cutoff=reads_cutoff,
+                    denoise_iter=denoise_iter,
+                    umi_ld=umi_ld,
+                    lb_hd_relative=lb_rel,
+                    combo=combo,
+                    logger=logger,
+                    show_progress=show_progress,
+                )
+                write_post_denoise_plots(
+                    denoised_agg_tsv=combo.denoised_agg_tsv,
+                    out_dir=combo.dir,
+                    unedited_bc_len=unedited_bc_len,
+                    logger=logger,
+                )
 
-            timer.start("Annotate")
-            alleles_tsv = step_annotate_and_finalize(
-                denoised_barcodes_tsv=denoised_barcodes_tsv,
-                locus=locus,
-                min_bc_len=min_bc_len,
-                sample_id=sample_id,
-                combo=combo,
-                logger=logger,
-            )
-            write_post_finalize_plots(
-                alleles_tsv=alleles_tsv,
-                out_dir=combo.dir,
-                unedited_bc_len=unedited_bc_len,
-                logger=logger,
-            )
-            combo_allele_paths.append(alleles_tsv)
+                timer.start("Annotate")
+                alleles_tsv = step_annotate_and_finalize(
+                    denoised_barcodes_tsv=denoised_barcodes_tsv,
+                    locus=locus,
+                    min_bc_len=min_bc_len,
+                    sample_id=sample_id,
+                    combo=combo,
+                    logger=logger,
+                )
+                write_post_finalize_plots(
+                    alleles_tsv=alleles_tsv,
+                    out_dir=combo.dir,
+                    unedited_bc_len=unedited_bc_len,
+                    logger=logger,
+                )
+                combo_allele_paths.append(alleles_tsv)
 
     step_cleanup_pear(paths=paths, keep_pear=keep_pear, logger=logger)
     elapsed = time.perf_counter() - t0

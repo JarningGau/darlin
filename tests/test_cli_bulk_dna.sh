@@ -15,6 +15,7 @@ set -euo pipefail
 # - Run this inside the Pixi environment so `python` has all dependencies:
 #     pixi run bash tests/test_cli_bulk_dna.sh
 # - We run via `python -m darlin.cli` and set `PYTHONPATH=src`, same as pytest.
+# - `bulk run` accepts multiple read cutoffs, e.g. `--reads-cutoff 1 2` (see tests/test_cli_bulk_dna.py).
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 export PYTHONPATH="${ROOT_DIR}/src${PYTHONPATH:+:${PYTHONPATH}}"

@@ -79,6 +79,44 @@ def test_cli_bulk_dna_run_pe85_r350_produces_outputs(tmp_path: Path) -> None:
     assert "PEAR (skipped): protocol pe85-r350" in log_text
 
 
+def test_cli_bulk_run_reads_cutoff_list_produces_multiple_combo_dirs(tmp_path: Path) -> None:
+    fq1 = Path("tests/data/bulkdna-f85r350/C126_CA_R1.fq.gz")
+    fq2 = Path("tests/data/bulkdna-f85r350/C126_CA_R2.fq.gz")
+    assert fq1.exists()
+    assert fq2.exists()
+
+    sample_id = "C126_CA"
+    outdir = tmp_path / "out"
+
+    r = _run(
+        "bulk",
+        "run",
+        "--sample-id",
+        sample_id,
+        "--protocol",
+        "pe85-r350",
+        "--fq1",
+        str(fq1),
+        "--fq2",
+        str(fq2),
+        "--output-dir",
+        str(outdir),
+        "--threads",
+        "1",
+        "--reads-cutoff",
+        "1",
+        "2",
+        "--sample-n",
+        "200",
+    )
+    assert r.returncode == 0, f"stdout:\n{r.stdout}\n\nstderr:\n{r.stderr}"
+    assert "Traceback" not in r.stderr
+
+    sample_dir = outdir / sample_id
+    assert (sample_dir / "reads_1_u_1_l_0.01" / "alleles_by_umis.tsv").exists()
+    assert (sample_dir / "reads_2_u_1_l_0.01" / "alleles_by_umis.tsv").exists()
+
+
 def test_cli_bulk_run_pe85_r350_rejects_skip_pear(tmp_path: Path) -> None:
     fq1 = Path("tests/data/bulkdna-f85r350/C126_CA_R1.fq.gz")
     fq2 = Path("tests/data/bulkdna-f85r350/C126_CA_R2.fq.gz")

@@ -47,7 +47,15 @@ def _bulk_main(_: argparse.Namespace) -> int:
 
 def _add_bulk_run(steps: argparse._SubParsersAction) -> None:
     p = steps.add_parser("run", help="Run the full bulk pipeline", formatter_class=HELP_FORMATTER)
-    _add_common_bulk_args(p, include_fqs=True, require_fqs=False)
+    _add_common_bulk_args(p, include_fqs=True, require_fqs=False, include_reads_cutoff=False)
+    p.add_argument(
+        "--reads-cutoff",
+        type=int,
+        nargs="+",
+        default=[1],
+        help="Minimum read support per (lineage barcode, UMI) pair; applied at denoising (not at filter). "
+        "Pass multiple values to run all combinations with --umi-ld and --lb-hd-relative.",
+    )
     p.add_argument(
         "--protocol",
         type=str,
@@ -244,7 +252,7 @@ def _bulk_run(args: argparse.Namespace) -> int:
         pear_path=args.pear_path,
         threads=args.threads,
         min_bc_len=args.min_bc_len,
-        reads_cutoff=args.reads_cutoff,
+        reads_cutoff_list=list(args.reads_cutoff),
         denoise_iter=args.denoise_iter,
         umi_ld_list=list(args.umi_ld),
         lb_hd_relative_list=list(args.lb_hd_relative),
