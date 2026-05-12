@@ -5,6 +5,8 @@ DARLIN is a computational framework for processing lineage-tracing data generate
 ## Installation
 
 ```bash
+git clone https://github.com/JarningGau/darlin.git
+cd darlin
 pixi install
 pixi run install-cli
 ```
