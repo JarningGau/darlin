@@ -33,16 +33,17 @@ Generate the granulocyte allele bank:
 
 ### How to choose homoplasy cutoff
 
-Let $\rho$ denote the **barcode generation probability** (homoplasy probability) assigned to an observed barcode from the allele bank. In the manuscript, $\rho$ is the matched allele’s **`smoothed_homoplasy`** value. Let $\rho_*$ be the **homoplasy cutoff**: barcodes with $\rho > \rho_*$ are discarded.
+Let $`\rho`$ denote the **barcode generation probability** (homoplasy probability) assigned to an observed barcode from the allele bank. In the manuscript, $`\rho`$ is the matched allele’s **`smoothed_homoplasy`** value. Let $`\rho_*`$ be the **homoplasy cutoff**: barcodes with $`\rho > \rho_*`$ are discarded.
 
-In plain terms, the bound links how many clones you keep ($M$), your target false-discovery rate ($\alpha$), and how small the **average** homoplasy must be among retained barcodes, $\langle \rho \mid \rho \leq \rho_* \rangle$ (not the threshold $\rho_*$ by itself). For example, with $\alpha = 0.05$ and about $M = 100$ retained clones, $\frac{2\alpha}{M - 1} \approx 10^{-3}$, so in that regime the mean homoplasy among passing lineages should be about $10^{-3}$ or lower when you tune $\rho_*$ accordingly.
+In plain terms, the bound links how many clones you keep ($`M`$), your target false-discovery rate ($`\alpha`$), and how small the **average** homoplasy must be among retained barcodes, $`\langle \rho \mid \rho \leq \rho_* \rangle`$ (not the threshold $`\rho_*`$ by itself). For example, with $`\alpha = 0.05`$ and about $`M = 100`$ retained clones, $`\frac{2\alpha}{M - 1} \approx 10^{-3}`$, so in that regime the mean homoplasy among passing lineages should be about $`10^{-3}`$ or lower when you tune $`\rho_*`$ accordingly.
 
-$$
+```math
 \langle \rho \mid \rho \leq \rho_* \rangle \leq \frac{2\alpha}{M - 1},
-$$
+```
 
 Full notation and motivation are in the original DARLIN paper (Methods).
 
-In practice: 
-1. We use **observed** homoplasy—whether the matched allele is seen in more than one bulk library (**`sample_count` > 1**)—rather than **`smoothed_homoplasy`** (the **inferred**, smoothed probability) when applying homoplasy cutoffs. 
-2. We use `normalized_count` as a proxy to $\rho$.
+In practice:
+
+1. We use **observed** homoplasy—whether the matched allele is seen in more than one bulk library (**`sample_count` > 1**)—rather than **`smoothed_homoplasy`** (the **inferred**, smoothed probability) when applying homoplasy cutoffs.
+2. We use `normalized_count` as a proxy to $`\rho`$.
