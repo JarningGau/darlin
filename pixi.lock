@@ -111,7 +111,7 @@ environments:
       - conda: https://mirrors.westlake.edu.cn/ANACONDA/cloud/conda-forge/linux-64/xorg-libxdmcp-1.1.5-hb03c661_1.conda
       - conda: https://mirrors.westlake.edu.cn/ANACONDA/cloud/conda-forge/linux-64/zlib-ng-2.3.3-hceb46e0_1.conda
       - conda: https://mirrors.westlake.edu.cn/ANACONDA/cloud/conda-forge/linux-64/zstd-1.5.7-hb78ec9c_6.conda
-      - pypi: git+https://github.com/JarningGau/darlin-core?rev=fe03de6#fe03de6424fb4cfefc836c71a3e77a7727943739
+      - pypi: git+https://github.com/JarningGau/darlin-core?rev=1.1.0#a07eaf16b1a916b6d6be936237438b32a51e0a20
 packages:
 - conda: https://mirrors.westlake.edu.cn/ANACONDA/cloud/conda-forge/linux-64/_openmp_mutex-4.5-20_gnu.conda
   build_number: 20
@@ -250,9 +250,9 @@ packages:
   - pkg:pypi/cycler?source=hash-mapping
   size: 14778
   timestamp: 1764466758386
-- pypi: git+https://github.com/JarningGau/darlin-core?rev=fe03de6#fe03de6424fb4cfefc836c71a3e77a7727943739
+- pypi: git+https://github.com/JarningGau/darlin-core?rev=1.1.0#a07eaf16b1a916b6d6be936237438b32a51e0a20
   name: darlin-core
-  version: 1.0.0
+  version: 1.1.0
   requires_dist:
   - numpy>=1.20.0
   - scipy>=1.7.0
