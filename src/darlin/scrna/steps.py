@@ -37,7 +37,13 @@ def step_extract(
 
     with open_text_maybe_gzip(fq1) as handle1, open_text_maybe_gzip(fq2) as handle2:
         iterator = iter_fastq_paired(handle1, handle2)
-        iterator = tqdm(iterator, desc="Extract", unit=" read-pairs", disable=not show_progress)
+        iterator = tqdm(
+            iterator,
+            desc="Processing reads",
+            unit=" reads",
+            unit_scale=True,
+            disable=not show_progress,
+        )
         for _id1, seq1, _qual1, _id2, seq2, _qual2 in iterator:
             total_reads += 1
             if max_reads is not None and total_reads > max_reads:
@@ -202,15 +208,25 @@ def step_denoise(
     logger: logging.Logger,
 ) -> pd.DataFrame:
     df = pd.read_csv(extracted_tsv, sep="\t")
-    df = df.groupby(["LB", "CB", "UB", "LB_len"], as_index=False).size().rename(columns={"size": "reads"})
+    df = (
+        df
+        .groupby(['LB', 'CB', 'UB', 'LB_len'], as_index=False)
+        .size()
+        .rename(columns={"size": "reads"})
+    )
     df = df[df["LB_len"] >= min_bc_len].copy()
-
+    ## CB -> CR
     whitelist = load_whitelist(whitelist_path)
     df["CR"] = _correct_cb_to_whitelist(df["CB"], whitelist)
     df = df[df["CR"].notna()].copy()
-    df = df.groupby(["LB", "CB", "UB", "CR", "LB_len"], as_index=False)["reads"].sum()
-
+    df = (
+        df
+        .groupby(['LB', 'CR', 'UB', 'LB_len'], as_index=False)
+        .agg(reads=('reads', 'sum'))
+    )
+    ## UR -> UR
     df = _correct_umis_per_cell(df, cb_col="CR", umi_col="UB", count_col="reads", threshold=umi_ld)
+    ## LR -> LR
     df = _correct_lb_per_cell(
         df,
         cr_col="CR",
@@ -220,7 +236,11 @@ def step_denoise(
         error_rate=lb_error_rate,
         min_hd=lb_min_hd,
     )
-    df = df.groupby(["LB", "CB", "UB", "CR", "UR", "LR", "LB_len"], as_index=False)["reads"].sum()
+    df = (
+        df
+        .groupby(['LR', 'CR', 'UR', 'LB_len'], as_index=False)
+        .agg(reads=('reads', 'sum'))
+    )
     df.to_csv(paths.denoised_tsv, sep="\t", index=False)
     logger.info(
         "Denoise: rows_written=%s cells=%s umis=%s lrs=%s -> %s",
@@ -273,8 +293,6 @@ def step_qc(
         df_final,
         paths.diagnostics_dir,
         major_fraction_threshold_molecule=major_fraction_threshold_molecule,
-        df_after_k=df_after_k,
-        reads_cutoff=reads_cutoff,
     )
     logger.info(
         "QC: major_rows=%s final_rows=%s cells=%s -> %s",

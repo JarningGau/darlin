@@ -74,13 +74,11 @@ The pipeline writes the following standard outputs under `<output-dir>/<sample-i
 - `cell_summary.tsv`
 - `annotated.tsv` (columns include `CR`, `LR`, `UR`, `reads`, `mutations`, `aligned_LR`, `aligned_ref`)
 - `nUMIs_by_cell_and_lineage.tsv` (columns `n_UMIs`, `CR`, `mutation`, `aligned_LR`, `aligned_ref`)
-- `diagnostics/extract_lb_length.png`
-- `diagnostics/qc_reads_fraction_hist.png`
-- `diagnostics/qc_reads_fraction_scatter.png`
-- `diagnostics/qc_reads_vs_umis.png`
-- `diagnostics/qc_k_cutoff_curve.png`
-- `diagnostics/qc_reads_cutoff_retention.png`
-- `diagnostics/qc_n_lr_per_cr_hist.png`
+- `diagnostics/fragment_length_distribution.png` — histogram of matched read sequence lengths (`LB_len`); vertical dashed line at the unedited lineage-barcode length; empty extract shows "No matched reads".
+- `diagnostics/qc1_pcr_chimera.png` — single two-panel figure: top, histogram of per-molecule `reads_fraction` with vertical line at `--major-fraction-threshold-molecule`; bottom, scatter of `reads_fraction` vs `reads` with log-scaled *y* axis and the same threshold line.
+- `diagnostics/qc2_capture_oligo_carryover.png` — log–log scatter of reads per cell vs UMIs per cell (`cell_summary`), points colored by *k* = reads/UMIs into bins ≤1, ≤5, ≤10, and >10; dashed red line with slope 1 for reference; legend titled *k* = Reads/UMIs.
+- `diagnostics/qc2_cells_above_k_cutoff.png` — for *k* cutoffs 1–19, number of cells with *k* ≥ cutoff (y axis in scientific notation when large).
+- `diagnostics/qc3_lineage_barcodes_per_cell.png` — histogram of distinct lineage records per cell (`n_LR` per `CR`), integer-width bins, log-scaled cell counts on *y*.
 
 ## Step-Wise Execution
 

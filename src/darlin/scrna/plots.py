@@ -3,6 +3,17 @@ from __future__ import annotations
 from pathlib import Path
 
 
+def _k_category_reads_per_umi(k: float) -> str:
+    """Bin k = reads / UMIs for scatter coloring (matches notebook darlin-scrna)."""
+    if k <= 1:
+        return "≤1"
+    if k <= 5:
+        return "≤5"
+    if k <= 10:
+        return "≤10"
+    return ">10"
+
+
 def write_extract_plots(df, diagnostics_dir: Path, *, unedited_bc_len: int) -> None:
     import matplotlib
 
@@ -10,25 +21,17 @@ def write_extract_plots(df, diagnostics_dir: Path, *, unedited_bc_len: int) -> N
     import matplotlib.pyplot as plt  # type: ignore
 
     diagnostics_dir.mkdir(parents=True, exist_ok=True)
-    fig, ax = plt.subplots(figsize=(4, 2.5))
+    fig, ax = plt.subplots(figsize=(4, 2))
     if len(df) > 0:
-        lengths = df["LB_len"].astype(int)
-        counts = lengths.value_counts().sort_index()
-        ax.bar(
-            counts.index.astype(int),
-            counts.values.astype(int),
-            width=0.9,
-            color="#4C72B0",
-        )
-        ax.set_xlim(0, 300)
+        ax.hist(df["LB_len"], bins=range(1, 300, 1), edgecolor="black")
     else:
         ax.text(0.5, 0.5, "No matched reads", ha="center", va="center", transform=ax.transAxes)
-    ax.axvline(unedited_bc_len, color="red", linestyle="--", linewidth=0.8)
-    ax.set_xlabel("LB length")
-    ax.set_ylabel("Reads")
-    ax.set_title("Extracted lineage barcode lengths")
+    ax.axvline(unedited_bc_len, color="red", linestyle="--", linewidth=0.6)
+    ax.set_xlabel("Sequence Length")
+    ax.set_ylabel("Number of reads")
+    # ax.set_title("Distribution of DARLIN Array Sequence\nLengths By Reads")
     fig.tight_layout()
-    fig.savefig(diagnostics_dir / "extract_lb_length.png", dpi=150)
+    fig.savefig(diagnostics_dir / "fragment_length_distribution.png", dpi=150)
     plt.close(fig)
 
 
@@ -39,45 +42,80 @@ def write_qc_plots(
     diagnostics_dir: Path,
     *,
     major_fraction_threshold_molecule: float,
-    df_after_k,
-    reads_cutoff: int,
 ) -> None:
     import matplotlib
 
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt  # type: ignore
+    import matplotlib.patches as mpatches  # type: ignore
+    import matplotlib.ticker as mtick  # type: ignore
     from matplotlib.ticker import ScalarFormatter  # type: ignore
 
     diagnostics_dir.mkdir(parents=True, exist_ok=True)
 
-    fig, ax = plt.subplots(figsize=(4, 2.5))
-    ax.hist(df_all["reads_fraction"], bins=50, edgecolor="white")
-    ax.axvline(major_fraction_threshold_molecule, color="red", linestyle="--", linewidth=0.8)
-    ax.set_xlabel("Reads fraction")
-    ax.set_ylabel("Count")
+    # QC 2: reads-fraction (matches notebook — one 2×1 figure, same style)
+    fig, axes = plt.subplots(2, 1, figsize=(3, 4))
+    ax0, ax1 = axes[0], axes[1]
+    ax0.hist(df_all["reads_fraction"], bins=50, edgecolor="white")
+    ax0.axvline(major_fraction_threshold_molecule, color="red", linestyle="--", linewidth=0.6)
+    ax0.set_ylabel("Number of (CR, UR)")
+    ax0.yaxis.set_major_formatter(mtick.ScalarFormatter(useMathText=True))
+    ax0.ticklabel_format(style="sci", axis="y", scilimits=(0, 0))
+
+    ax1.scatter(df_all["reads_fraction"], df_all["reads"], s=0.1, alpha=0.1)
+    ax1.axvline(major_fraction_threshold_molecule, color="red", linestyle="--", linewidth=0.6)
+    ax1.set_xlabel("Reads Fraction")
+    ax1.set_ylabel("Reads")
+    ax1.set_yscale("log")
+
     fig.tight_layout()
-    fig.savefig(diagnostics_dir / "qc_reads_fraction_hist.png", dpi=150)
+    fig_path = diagnostics_dir / "qc1_pcr_chimera.png"
+    fig.savefig(fig_path, dpi=150)
     plt.close(fig)
 
-    fig, ax = plt.subplots(figsize=(4, 2.5))
-    ax.scatter(df_all["reads_fraction"], df_all["reads"], s=4, alpha=0.2)
-    ax.axvline(major_fraction_threshold_molecule, color="red", linestyle="--", linewidth=0.8)
-    ax.set_xlabel("Reads fraction")
-    ax.set_ylabel("Reads")
-    ax.set_yscale("log")
-    fig.tight_layout()
-    fig.savefig(diagnostics_dir / "qc_reads_fraction_scatter.png", dpi=150)
-    plt.close(fig)
-
-    fig, ax = plt.subplots(figsize=(4, 3))
+    fig, ax = plt.subplots(figsize=(5, 3))
     if len(cell_summary) > 0:
-        ax.scatter(cell_summary["n_reads"], cell_summary["n_UR"], s=6, alpha=0.4)
+        k_cat_order = ["≤1", "≤5", "≤10", ">10"]
+        k_cat_colors = {
+            "≤1": "#4575b4",
+            "≤5": "#91bfdb",
+            "≤10": "#fee090",
+            ">10": "#d73027",
+        }
+        k_cats = cell_summary["k"].map(_k_category_reads_per_umi)
+        for cat in k_cat_order:
+            mask = k_cats == cat
+            sub = cell_summary.loc[mask]
+            if len(sub) == 0:
+                continue
+            ax.scatter(
+                sub["n_reads"],
+                sub["n_UR"],
+                s=2,
+                alpha=0.4,
+                color=k_cat_colors[cat],
+                label=cat,
+            )
+        ur_min = float(cell_summary["n_UR"].min())
+        ur_max = float(cell_summary["n_UR"].max())
+        ax.plot(
+            [ur_min, ur_max],
+            [ur_min, ur_max],
+            linestyle="--",
+            color="red",
+            linewidth=1,
+            label="slope=1",
+        )
         ax.set_xscale("log")
         ax.set_yscale("log")
-    ax.set_xlabel("Reads")
-    ax.set_ylabel("UMIs")
-    fig.tight_layout()
-    fig.savefig(diagnostics_dir / "qc_reads_vs_umis.png", dpi=150)
+        legend_handles = [
+            mpatches.Patch(color=k_cat_colors[cat], label=f"k {cat}") for cat in k_cat_order
+        ]
+        ax.legend(handles=legend_handles, title="k = Reads/UMIs", loc="center left", bbox_to_anchor=(1, 0.5))
+    ax.set_xlabel("Reads per cell")
+    ax.set_ylabel("UMIs per cell")
+    fig.tight_layout(rect=[0, 0, 0.85, 1])
+    fig.savefig(diagnostics_dir / "qc2_capture_oligo_carryover.png", dpi=150)
     plt.close(fig)
 
     fig, ax = plt.subplots(figsize=(4, 2.5))
@@ -90,35 +128,7 @@ def write_qc_plots(
     ax.set_xlabel("k cutoff")
     ax.set_ylabel("Cells >= cutoff")
     fig.tight_layout()
-    fig.savefig(diagnostics_dir / "qc_k_cutoff_curve.png", dpi=150)
-    plt.close(fig)
-
-    fig, ax = plt.subplots(figsize=(4, 2.5))
-    if len(df_after_k) > 0:
-        reads_arr = df_after_k["reads"].to_numpy()
-        r_tot = float(reads_arr.sum())
-        if r_tot > 0:
-            max_r = int(reads_arr.max())
-            cap = 500
-            if max_r <= cap:
-                xs = list(range(0, max_r + 1))
-            else:
-                xs = list(range(0, cap + 1))
-                step = max(1, (max_r - cap) // 300)
-                xs.extend(list(range(cap + step, max_r + 1, step)))
-                if xs[-1] < max_r:
-                    xs.append(max_r)
-            ys = [float(reads_arr[reads_arr >= c].sum()) / r_tot for c in xs]
-            ax.plot(xs, ys, marker="o", markersize=2, color="#4C72B0")
-        ax.axvline(reads_cutoff, color="red", linestyle="--", linewidth=0.8)
-    else:
-        ax.text(0.5, 0.5, "No rows after k filter", ha="center", va="center", transform=ax.transAxes)
-    ax.set_xlabel("Reads Cutoff")
-    ax.set_ylabel("Frac. of Reads Retained")
-    ax.set_ylim(-0.02, 1.02)
-    ax.grid(True, alpha=0.3)
-    fig.tight_layout()
-    fig.savefig(diagnostics_dir / "qc_reads_cutoff_retention.png", dpi=150)
+    fig.savefig(diagnostics_dir / "qc2_cells_above_k_cutoff.png", dpi=150)
     plt.close(fig)
 
     fig, ax = plt.subplots(figsize=(4, 2.5))
@@ -130,5 +140,5 @@ def write_qc_plots(
     ax.set_xlabel("LRs per cell")
     ax.set_ylabel("Cells")
     fig.tight_layout()
-    fig.savefig(diagnostics_dir / "qc_n_lr_per_cr_hist.png", dpi=150)
+    fig.savefig(diagnostics_dir / "qc3_lineage_barcodes_per_cell.png", dpi=150)
     plt.close(fig)
