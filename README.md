@@ -67,7 +67,7 @@ darlin bulk run \
   --threads 1
 ```
 
-Results are written under `<output-dir>/<sample-id>/`. See [docs/bulk.md](docs/bulk.md) for the full argument reference, parameter interactions, output layout, and step-wise execution.
+Results are written under `<output-dir>/<sample-id>/`. See [docs/bulk.md](docs/bulk.md) for the full argument reference, parameter interactions, output layout, and step-wise execution. User-visible CLI and output changes are summarized in [docs/CHANGELOG.md](docs/CHANGELOG.md).
 
 ### Single-Cell RNA-seq
 
@@ -93,7 +93,7 @@ darlin scrna run \
   --sample-n 200
 ```
 
-Results are written under `<output-dir>/<sample-id>/`. See [docs/scrna.md](docs/scrna.md) for the full argument reference, output layout, and step-wise execution.
+Results are written under `<output-dir>/<sample-id>/`. See [docs/scrna.md](docs/scrna.md) for the full argument reference, output layout, and step-wise execution. See [docs/CHANGELOG.md](docs/CHANGELOG.md) for a running summary of notable changes.
 
 ## Project Layout
 

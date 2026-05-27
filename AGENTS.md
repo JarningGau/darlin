@@ -8,7 +8,7 @@ Contributor guide for **darlin**, a Python 3.11 project managed with [Pixi](http
 - **Environment:** Pixi installs dependencies into `.pixi/` (ignored by Git except `.pixi/config.toml` if present).
 - **Data:** `data/` and `old/` are listed in `.gitignore`—keep large or sensitive datasets out of version control unless you intentionally add exceptions.
 - **Source & tests:** Put application code under a clear package name (e.g. `darlin/` or `src/darlin/`). Tests live under `tests/` with parallel module paths to the code they cover; larger or shared fixtures may sit under `tests/data/` (or similar) instead of the repo-root `data/` tree.
-- **Docs:** Keep command references in `docs/` aligned with CLI behavior, especially when output filenames or tabular output schemas change.
+- **Docs:** Keep command references in `docs/` aligned with CLI behavior, especially when output filenames or tabular output schemas change. For user-visible behavior or output changes, add a short entry under **Unreleased** in `docs/CHANGELOG.md`.
 
 ## Build, Test, and Development Commands
 
@@ -48,6 +48,18 @@ After adding `[tasks]` entries, document them in this file or in `README.md` so 
 ## Lockfile & Merges
 
 `pixi.lock` is configured in `.gitattributes` for merge safety. Resolve lockfile conflicts by regenerating (`pixi lock` / `pixi install`) rather than hand-editing when possible.
+
+## Version bumps
+
+The published package version is `__version__` in `src/darlin/__init__.py` (wired into `pyproject.toml` for editable installs and builds). Documented releases and commit anchors live in `docs/CHANGELOG.md`.
+
+When cutting a new release:
+
+1. **Changelog:** Add `## [x.y.z] - YYYY-MM-DD` above **Unreleased** in `docs/CHANGELOG.md`, move finished bullets out of **Unreleased** into that section (or rewrite for accuracy), then reset **Unreleased** for ongoing work.
+2. **Version constant:** Bump `__version__` in `src/darlin/__init__.py` to `x.y.z` so it matches the new changelog heading.
+3. **Git tag (optional):** After the release commit is on the branch you ship from, create an annotated tag `vx.y.z` if your workflow uses tags.
+
+Use [SemVer](https://semver.org/) intent: during `0.x`, treat incompatible CLI or output-schema changes as at least a **minor** bump unless you explicitly document a patch-only policy; call out breaking changes in the changelog.
 
 ## Agent-Specific Instructions
 
