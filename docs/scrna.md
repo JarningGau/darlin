@@ -76,10 +76,11 @@ The pipeline writes the following standard outputs under `<output-dir>/<sample-i
 - `step4_annotated.tsv` (columns include `CR`, `LR`, `UR`, `reads`, `mutations`, `aligned_LR`, `aligned_ref`)
 - `step4_final.tsv` (columns `n_UMIs`, `CR`, `mutation`, `aligned_LR`, `aligned_ref`)
 - `diagnostic_plots/fragment_length_distribution.png` — histogram of matched read sequence lengths (`LB_len`); vertical dashed line at the unedited lineage-barcode length; empty extract shows "No matched reads".
-- `diagnostic_plots/qc1_pcr_chimera.png` — single two-panel figure: top, histogram of per-molecule `reads_fraction` with vertical line at `--major-fraction-threshold-molecule`; bottom, scatter of `reads_fraction` vs `reads` with log-scaled *y* axis and the same threshold line.
-- `diagnostic_plots/qc2_capture_oligo_carryover.png` — log–log scatter of reads per cell vs UMIs per cell (`step3_qc_capture_oligo_carryover_data.tsv`), points colored by *k* = reads/UMIs into bins ≤1, ≤5, ≤10, and >10; dashed red line with slope 1 for reference; legend titled *k* = Reads/UMIs.
-- `diagnostic_plots/qc2_cells_above_k_cutoff.png` — for *k* cutoffs 1–19, number of cells with *k* ≥ cutoff (y axis in scientific notation when large).
-- `diagnostic_plots/qc3_lineage_barcodes_per_cell.png` — histogram of distinct lineage records per cell (`n_LR` per `CR`), integer-width bins, log-scaled cell counts on *y*.
+- `diagnostic_plots/qc1_reads_cutoff.png` — denoise 前分子表：上为 reads cutoff vs 分子数（log x/y），下为 reads cutoff vs 保留 reads 比例；红色虚线为 `--reads-cutoff-per-molecule`。
+- `diagnostic_plots/qc2_pcr_chimera.png` — 单一 2×1 图：上面是每个分子 `reads_fraction` 的直方图，红色竖线为 `--major-fraction-threshold-molecule`；下面是 `reads_fraction` vs `reads` 的散点图，y 轴 log，并有相同的阈值线。
+- `diagnostic_plots/qc3_capture_oligo_carryover.png` — log–log 散点：每个细胞的 reads vs UMIs（`step3_qc_capture_oligo_carryover_data.tsv`），按 *k* = reads/UMIs 分箱 ≤1、≤5、≤10、>10 着色；虚线红线 slope 1；图例标题为 *k* = Reads/UMIs。
+- `diagnostic_plots/qc3_cells_above_k_cutoff.png` — 对 *k* cutoffs 1–19，统计 *k* ≥ cutoff 的 cell 数（y 轴在值较大时使用科学计数法）。
+- `diagnostic_plots/qc4_lineage_barcodes_per_cell.png` — 每个 cell (`CR`) 的不同谱系记录数 (`n_LR`) 直方图，整数宽度 bin，y 轴 log。
 
 ## Step-Wise Execution
 

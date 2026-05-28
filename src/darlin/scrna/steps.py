@@ -16,7 +16,7 @@ from darlin.scrna.logging import (
 )
 from darlin.scrna.matching import find_all_matches, get_mm_dist
 from darlin.scrna.paths import ScrnaPaths
-from darlin.scrna.plots import write_extract_plots, write_qc_plots
+from darlin.scrna.plots import write_extract_plots, write_qc_plots, write_reads_cutoff_plot
 from darlin.scrna.protocols import ScrnaProtocol
 
 
@@ -229,6 +229,11 @@ def step_denoise(
     log_molecule_summary(logger, df)
     log_step_title(logger, "Denoise (correct sequencing errors)")
     df = df[df["LB_len"] >= min_bc_len].copy()
+    write_reads_cutoff_plot(
+        df,
+        paths.diagnostics_dir,
+        reads_cutoff=reads_cutoff_per_molecule,
+    )
     df = df[df["reads"] >= reads_cutoff_per_molecule].copy()
     ## CB -> CR
     whitelist = load_whitelist(whitelist_path)
