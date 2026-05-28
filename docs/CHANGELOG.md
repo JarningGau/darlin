@@ -29,6 +29,15 @@ the version.
   `qc3_lineage_barcodes_per_cell.png`); see `docs/scrna.md`.
 - scRNA denoise: molecule counts aggregated after correction using `LR`,
   `CR`, `UR`, and `LB_len` only in `denoised.tsv` (see tests and `docs/scrna.md`).
+- scRNA annotate output: `nUMIs_by_cell_and_lineage.tsv` renamed to `final.tsv`
+  (`paths.final_tsv`).
+- scRNA standard outputs: step-prefixed TSV names (`step1_extracted.tsv` through
+  `step4_final.tsv`, including `step3_qc_capture_oligo_carryover_data.tsv`) and
+  diagnostic figures under `diagnostic_plots/`; see `docs/scrna.md` and
+  `ScrnaPaths` in `src/darlin/scrna/paths.py`.
+- scRNA pipeline step logs: multi-line summaries with thousands separators,
+  inline percentages on extract skip/match lines, and section titles aligned
+  with analysis stages (PCR chimera removal, capture oligo carryover removal).
 
 ### Removed
 

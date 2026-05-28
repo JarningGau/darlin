@@ -219,8 +219,8 @@ def test_scrna_run_small_sample_completes_after_validation(tmp_path: Path) -> No
     )
     assert r.returncode == 0, f"stdout:\n{r.stdout}\n\nstderr:\n{r.stderr}"
     sample_dir = tmp_path / "out" / "LL837_CA"
-    assert (sample_dir / "annotated.tsv").exists()
-    assert (sample_dir / "nUMIs_by_cell_and_lineage.tsv").exists()
+    assert (sample_dir / "step4_annotated.tsv").exists()
+    assert (sample_dir / "step4_final.tsv").exists()
 
 
 def test_cli_scrna_extract_produces_outputs(tmp_path: Path) -> None:
@@ -246,7 +246,7 @@ def test_cli_scrna_extract_produces_outputs(tmp_path: Path) -> None:
     assert r.returncode == 0, f"stdout:\n{r.stdout}\n\nstderr:\n{r.stderr}"
 
     sample_dir = outdir / sample_id
-    extracted = sample_dir / "extracted.tsv"
+    extracted = sample_dir / "step1_extracted.tsv"
     assert extracted.exists()
 
     with extracted.open() as f:
@@ -257,7 +257,7 @@ def test_cli_scrna_extract_produces_outputs(tmp_path: Path) -> None:
 def test_cli_scrna_camellia_extract_produces_outputs(tmp_path: Path) -> None:
     sample_dir = _run_camellia_extract_fixture(tmp_path)
 
-    extracted = sample_dir / "extracted.tsv"
+    extracted = sample_dir / "step1_extracted.tsv"
     assert extracted.exists()
 
     df = pd.read_csv(extracted, sep="\t")
@@ -283,7 +283,7 @@ def test_cli_scrna_denoise_produces_required_columns(tmp_path: Path) -> None:
     )
     assert r.returncode == 0, f"stdout:\n{r.stdout}\n\nstderr:\n{r.stderr}"
 
-    denoised = sample_dir / "denoised.tsv"
+    denoised = sample_dir / "step2_denoised.tsv"
     assert denoised.exists()
     df = pd.read_csv(denoised, sep="\t")
     for column in ["LR", "CR", "UR", "LB_len", "reads"]:
@@ -316,9 +316,9 @@ def test_cli_scrna_qc_writes_tables_and_plots(tmp_path: Path) -> None:
     )
     assert r.returncode == 0, f"stdout:\n{r.stdout}\n\nstderr:\n{r.stderr}"
 
-    assert (sample_dir / "qc.tsv").exists()
-    assert (sample_dir / "cell_summary.tsv").exists()
-    # Diagnostics plots are optional; tests should not require files under diagnostics/.
+    assert (sample_dir / "step3_qc.tsv").exists()
+    assert (sample_dir / "step3_qc_capture_oligo_carryover_data.tsv").exists()
+    # Diagnostics plots are optional; tests should not require files under diagnostic_plots/.
 
 
 def test_cli_scrna_annotate_produces_required_columns(tmp_path: Path) -> None:
@@ -334,8 +334,8 @@ def test_cli_scrna_annotate_produces_required_columns(tmp_path: Path) -> None:
     )
     assert r.returncode == 0, f"stdout:\n{r.stdout}\n\nstderr:\n{r.stderr}"
 
-    annotated = sample_dir / "annotated.tsv"
-    grouped = sample_dir / "nUMIs_by_cell_and_lineage.tsv"
+    annotated = sample_dir / "step4_annotated.tsv"
+    grouped = sample_dir / "step4_final.tsv"
     assert annotated.exists()
     assert grouped.exists()
     df = pd.read_csv(annotated, sep="\t")
@@ -409,12 +409,12 @@ def test_cli_scrna_run_produces_outputs(tmp_path: Path) -> None:
     sample_dir = outdir / sample_id
     for path in [
         sample_dir / "run.log",
-        sample_dir / "extracted.tsv",
-        sample_dir / "denoised.tsv",
-        sample_dir / "qc.tsv",
-        sample_dir / "cell_summary.tsv",
-        sample_dir / "annotated.tsv",
-        sample_dir / "nUMIs_by_cell_and_lineage.tsv",
+        sample_dir / "step1_extracted.tsv",
+        sample_dir / "step2_denoised.tsv",
+        sample_dir / "step3_qc.tsv",
+        sample_dir / "step3_qc_capture_oligo_carryover_data.tsv",
+        sample_dir / "step4_annotated.tsv",
+        sample_dir / "step4_final.tsv",
     ]:
         assert path.exists(), f"Expected output missing: {path}"
 
@@ -445,9 +445,9 @@ def test_cli_scrna_camellia_run_produces_outputs(tmp_path: Path) -> None:
     assert r.returncode == 0, f"stdout:\n{r.stdout}\n\nstderr:\n{r.stderr}"
 
     sample_dir = outdir / sample_id
-    extracted = pd.read_csv(sample_dir / "extracted.tsv", sep="\t")
+    extracted = pd.read_csv(sample_dir / "step1_extracted.tsv", sep="\t")
     assert not extracted.empty
     assert extracted["CB"].str.len().eq(8).all()
     assert extracted["UB"].str.len().eq(8).all()
-    assert (sample_dir / "annotated.tsv").exists()
-    assert (sample_dir / "nUMIs_by_cell_and_lineage.tsv").exists()
+    assert (sample_dir / "step4_annotated.tsv").exists()
+    assert (sample_dir / "step4_final.tsv").exists()

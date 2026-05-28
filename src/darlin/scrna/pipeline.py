@@ -56,14 +56,14 @@ def run_scrna_pipeline(
     logger = setup_logging(paths.log_file, level)
     started = time.perf_counter()
 
-    logger.info("--------------------------------")
+    logger.info('-' * 40)
     logger.info("Starting scrna pipeline for sample: %s", sample_id)
     logger.info("  Input R1: %s", Path(fq1).name)
     logger.info("  Input R2: %s", Path(fq2).name)
     logger.info("  Output:   %s", paths.sample_dir)
     logger.info("  Locus:    %s", locus)
     logger.info("  Protocol: %s", protocol.name)
-    logger.info("--------------------------------")
+    logger.info('-' * 40)
 
     unedited_bc_len, p3_seq, p5_seq = resolve_scrna_primers(locus=locus)
     max_reads = resolve_max_reads(test=test, sample_n=sample_n)
@@ -107,6 +107,5 @@ def run_scrna_pipeline(
     )
 
     elapsed = time.perf_counter() - started
-    logger.info("Timing summary")
     logger.info("Pipeline completed in %.2fs", elapsed)
     return 0

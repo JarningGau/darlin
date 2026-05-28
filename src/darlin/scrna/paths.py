@@ -14,7 +14,7 @@ class ScrnaPaths:
     qc_tsv: Path
     cell_summary_tsv: Path
     annotated_tsv: Path
-    numis_by_cell_and_lineage_tsv: Path
+    final_tsv: Path
 
     def ensure_dirs(self) -> None:
         self.sample_dir.mkdir(parents=True, exist_ok=True)
@@ -25,15 +25,15 @@ def get_scrna_paths(output_dir: str | Path, sample_id: str) -> ScrnaPaths:
     if "/" in sample_id or "\\" in sample_id:
         raise ValueError("sample_id must be a single path segment without path separators")
     sample_dir = Path(output_dir) / sample_id
-    diagnostics_dir = sample_dir / "diagnostics"
+    diagnostics_dir = sample_dir / "diagnostic_plots"
     return ScrnaPaths(
         sample_dir=sample_dir,
         diagnostics_dir=diagnostics_dir,
         log_file=sample_dir / "run.log",
-        extracted_tsv=sample_dir / "extracted.tsv",
-        denoised_tsv=sample_dir / "denoised.tsv",
-        qc_tsv=sample_dir / "qc.tsv",
-        cell_summary_tsv=sample_dir / "cell_summary.tsv",
-        annotated_tsv=sample_dir / "annotated.tsv",
-        numis_by_cell_and_lineage_tsv=sample_dir / "nUMIs_by_cell_and_lineage.tsv",
+        extracted_tsv=sample_dir / "step1_extracted.tsv",
+        denoised_tsv=sample_dir / "step2_denoised.tsv",
+        qc_tsv=sample_dir / "step3_qc.tsv",
+        cell_summary_tsv=sample_dir / "step3_qc_capture_oligo_carryover_data.tsv",
+        annotated_tsv=sample_dir / "step4_annotated.tsv",
+        final_tsv=sample_dir / "step4_final.tsv",
     )

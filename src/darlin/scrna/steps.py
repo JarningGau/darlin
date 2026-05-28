@@ -7,6 +7,13 @@ import pandas as pd  # type: ignore
 from tqdm import tqdm  # type: ignore
 
 from darlin.scrna.io import iter_fastq_paired, load_whitelist, open_text_maybe_gzip
+from darlin.scrna.logging import (
+    log_count,
+    log_count_with_pct,
+    log_molecule_summary,
+    log_output,
+    log_step_title,
+)
 from darlin.scrna.matching import find_all_matches, get_mm_dist
 from darlin.scrna.paths import ScrnaPaths
 from darlin.scrna.plots import write_extract_plots, write_qc_plots
@@ -72,15 +79,18 @@ def step_extract(
     df = pd.DataFrame(rows, columns=["LB", "CB", "UB", "LB_len"])
     df.to_csv(paths.extracted_tsv, sep="\t", index=False)
     write_extract_plots(df, paths.diagnostics_dir, unedited_bc_len=unedited_bc_len)
-    logger.info(
-        "Extract: reads_scanned=%s matched_reads=%s rows_written=%s skipped_barcode_with_N=%s skipped_no_unique_primer_pair=%s -> %s",
-        total_reads if max_reads is None else min(total_reads, max_reads),
-        matched_reads,
-        len(df),
-        skipped_barcode_n,
+    reads_scanned = total_reads if max_reads is None else min(total_reads, max_reads)
+    log_step_title(logger, "Extract")
+    log_count(logger, "Total reads", reads_scanned)
+    log_count_with_pct(logger, "Matched reads", matched_reads, reads_scanned)
+    log_count_with_pct(logger, "Skipped (barcode with N)", skipped_barcode_n, reads_scanned)
+    log_count_with_pct(
+        logger,
+        "Skipped (no matched flanking sequence)",
         skipped_no_dual_match,
-        paths.extracted_tsv,
+        reads_scanned,
     )
+    log_output(logger, paths.extracted_tsv)
     return df
 
 
@@ -215,6 +225,9 @@ def step_denoise(
         .rename(columns={"size": "reads"})
     )
     df = df[df["LB_len"] >= min_bc_len].copy()
+    log_step_title(logger, "Before denoise")
+    log_molecule_summary(logger, df)
+    log_step_title(logger, "Denoise (correct sequencing errors)")
     ## CB -> CR
     whitelist = load_whitelist(whitelist_path)
     df["CR"] = _correct_cb_to_whitelist(df["CB"], whitelist)
@@ -242,14 +255,9 @@ def step_denoise(
         .agg(reads=('reads', 'sum'))
     )
     df.to_csv(paths.denoised_tsv, sep="\t", index=False)
-    logger.info(
-        "Denoise: rows_written=%s cells=%s umis=%s lrs=%s -> %s",
-        len(df),
-        df["CR"].nunique(),
-        df["UR"].nunique(),
-        df["LR"].nunique(),
-        paths.denoised_tsv,
-    )
+    log_step_title(logger, "After sequencing error correction")
+    log_molecule_summary(logger, df)
+    log_output(logger, paths.denoised_tsv)
     return df
 
 
@@ -262,6 +270,7 @@ def step_qc(
     paths: ScrnaPaths,
     logger: logging.Logger,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
+    log_step_title(logger, "QC (remove PCR artifacts)")
     df = pd.read_csv(denoised_tsv, sep="\t")
     df["group_reads"] = df.groupby(["CR", "UR"])["reads"].transform("sum")
     df["reads_fraction"] = df["reads"] / df["group_reads"]
@@ -294,13 +303,16 @@ def step_qc(
         paths.diagnostics_dir,
         major_fraction_threshold_molecule=major_fraction_threshold_molecule,
     )
-    logger.info(
-        "QC: major_rows=%s final_rows=%s cells=%s -> %s",
-        len(df_major),
-        len(df_final),
-        df_final["CR"].nunique() if len(df_final) > 0 else 0,
-        paths.qc_tsv,
-    )
+    reads_with_amplification_error = int(df["reads"].sum() - df_major["reads"].sum())
+    log_step_title(logger, "After PCR chimera removal")
+    log_molecule_summary(logger, df_major)
+    log_count(logger, "Reads with amplification error", reads_with_amplification_error)
+
+    reads_removed_coca = int(df_major["reads"].sum() - df_final["reads"].sum())
+    log_step_title(logger, "After capture oligo carryover removal")
+    log_molecule_summary(logger, df_final)
+    log_count(logger, "Reads removed as capture-oligo carryover", reads_removed_coca)
+    log_output(logger, paths.qc_tsv)
     return df_final, cell_summary
 
 
@@ -339,7 +351,7 @@ def step_annotate(
         )
         # grouped = grouped.merge(annotation_map, on="LR", how="left")
         grouped = grouped[grouped_cols]
-        grouped.to_csv(paths.numis_by_cell_and_lineage_tsv, sep="\t", index=False)
+        grouped.to_csv(paths.final_tsv, sep="\t", index=False)
         return grouped
 
     df = pd.read_csv(qc_tsv, sep="\t")
@@ -358,12 +370,7 @@ def step_annotate(
     final_df = final_df.rename(columns={"aligned_query": "aligned_LR"})
     final_df.to_csv(paths.annotated_tsv, sep="\t", index=False)
     grouped = _write_grouped_counts(final_df)
-    logger.info(
-        "Annotate: analyzed_queries=%s rows_written=%s grouped_rows=%s -> %s | %s",
-        len(query),
-        len(final_df),
-        len(grouped),
-        paths.annotated_tsv,
-        paths.numis_by_cell_and_lineage_tsv,
-    )
+    log_step_title(logger, "Annotate")
+    log_output(logger, paths.annotated_tsv)
+    log_output(logger, paths.final_tsv)
     return final_df

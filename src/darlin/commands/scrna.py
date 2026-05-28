@@ -110,7 +110,7 @@ def _add_scrna_denoise(steps: argparse._SubParsersAction) -> None:
         "--extracted",
         type=str,
         default=None,
-        help="Path to extracted.tsv (defaults to <output-dir>/<sample-id>/extracted.tsv)",
+        help="Path to step1_extracted.tsv (defaults to <output-dir>/<sample-id>/step1_extracted.tsv)",
     )
     p.add_argument("--umi-ld", type=int, default=1, help="UMI clustering threshold")
     p.add_argument("--lb-error-rate", type=float, default=0.01, help="Relative lineage barcode error rate")
@@ -125,7 +125,7 @@ def _add_scrna_qc(steps: argparse._SubParsersAction) -> None:
         "--denoised",
         type=str,
         default=None,
-        help="Path to denoised.tsv (defaults to <output-dir>/<sample-id>/denoised.tsv)",
+        help="Path to step2_denoised.tsv (defaults to <output-dir>/<sample-id>/step2_denoised.tsv)",
     )
     p.add_argument(
         "--major-fraction-threshold-molecule",
@@ -150,7 +150,7 @@ def _add_scrna_annotate(steps: argparse._SubParsersAction) -> None:
         "--qc",
         type=str,
         default=None,
-        help="Path to qc.tsv (defaults to <output-dir>/<sample-id>/qc.tsv)",
+        help="Path to step3_qc.tsv (defaults to <output-dir>/<sample-id>/step3_qc.tsv)",
     )
     p.set_defaults(func=_scrna_annotate)
 
