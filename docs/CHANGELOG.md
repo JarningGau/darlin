@@ -16,6 +16,18 @@ the version.
 
 ### Added
 
+### Changed
+
+### Removed
+
+## [0.2.0] - 2026-05-28
+
+**0.2.0** is the repository tree at commit
+[`d3aba3a`](https://github.com/JarningGau/darlin/commit/d3aba3a18a80e721f9cd870636a663b88b2b4bfa)
+(`d3aba3a18a80e721f9cd870636a663b88b2b4bfa`).
+
+### Added
+
 - Pixi tasks `test-sc` and `test-bulk` for narrower pytest runs (`pixi.toml`).
 - This changelog under `docs/CHANGELOG.md`.
 
@@ -28,9 +40,10 @@ the version.
   `qc2_capture_oligo_carryover.png`, `qc2_cells_above_k_cutoff.png`,
   `qc3_lineage_barcodes_per_cell.png`); see `docs/scrna.md`.
 - scRNA denoise: molecule counts aggregated after correction using `LR`,
-  `CR`, `UR`, and `LB_len` only in `denoised.tsv` (see tests and `docs/scrna.md`).
-- scRNA annotate output: `nUMIs_by_cell_and_lineage.tsv` renamed to `final.tsv`
-  (`paths.final_tsv`).
+  `CR`, `UR`, and `LB_len` only in `step2_denoised.tsv` (see tests and
+  `docs/scrna.md`).
+- scRNA annotate output: `nUMIs_by_cell_and_lineage.tsv` renamed to
+  `step4_final.tsv` (`paths.final_tsv`).
 - scRNA standard outputs: step-prefixed TSV names (`step1_extracted.tsv` through
   `step4_final.tsv`, including `step3_qc_capture_oligo_carryover_data.tsv`) and
   diagnostic figures under `diagnostic_plots/`; see `docs/scrna.md` and
