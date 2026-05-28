@@ -23,8 +23,8 @@ the version.
 ## [0.2.0] - 2026-05-28
 
 **0.2.0** is the repository tree at commit
-[`d3aba3a`](https://github.com/JarningGau/darlin/commit/d3aba3a18a80e721f9cd870636a663b88b2b4bfa)
-(`d3aba3a18a80e721f9cd870636a663b88b2b4bfa`).
+[`5886b69`](https://github.com/JarningGau/darlin/commit/5886b693ce1fd7863156863bfb694708479aa263)
+(`5886b693ce1fd7863156863bfb694708479aa263`).
 
 ### Added
 
