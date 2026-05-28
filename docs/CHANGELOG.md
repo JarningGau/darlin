@@ -16,17 +16,32 @@ the version.
 
 ### Added
 
-- scRNA: 新增 denoise 步骤 reads cutoff 诊断图 `qc1_reads_cutoff.png`（写入 `diagnostic_plots/`，在应用
-  `--reads-cutoff-per-molecule` 过滤之前生成）。
+### Changed
+
+### Removed
+
+## [0.3.0] - 2026-05-28
+
+**0.3.0** is the repository tree at commit
+[`<sha>`](https://github.com/JarningGau/darlin/commit/<sha>)
+(`<full-sha>`).
+
+### Added
+
+- scRNA: add denoise-step reads-cutoff diagnostic figure `qc1_reads_cutoff.png`
+  (saved under `diagnostic_plots/`, generated before applying the
+  `--reads-cutoff-per-molecule` filter).
 
 ### Changed
 
 - scRNA: rename QC cutoff flags `--reads-umis-ratio-cutoff` → `--k-cutoff` and
   `--reads-cutoff` → `--reads-cutoff-per-cell`; add `--reads-cutoff-per-molecule`.
-- scRNA: 诊断图文件名前缀整体后移一位以为 reads cutoff 图腾出 `qc1_` 槽位：`qc1_pcr_chimera.png` →
-  `qc2_pcr_chimera.png`，`qc2_capture_oligo_carryover.png` → `qc3_capture_oligo_carryover.png`，
-  `qc2_cells_above_k_cutoff.png` → `qc3_cells_above_k_cutoff.png`，
-  `qc3_lineage_barcodes_per_cell.png` → `qc4_lineage_barcodes_per_cell.png`。
+- scRNA: shift QC diagnostic plot filename prefixes by one to free the `qc1_`
+  slot for the reads-cutoff figure:
+  `qc1_pcr_chimera.png` → `qc2_pcr_chimera.png`,
+  `qc2_capture_oligo_carryover.png` → `qc3_capture_oligo_carryover.png`,
+  `qc2_cells_above_k_cutoff.png` → `qc3_cells_above_k_cutoff.png`,
+  `qc3_lineage_barcodes_per_cell.png` → `qc4_lineage_barcodes_per_cell.png`.
 
 ### Removed
 

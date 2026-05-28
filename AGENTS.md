@@ -8,7 +8,7 @@ Contributor guide for **darlin**, a Python 3.11 project managed with [Pixi](http
 - **Environment:** Pixi installs dependencies into `.pixi/` (ignored by Git except `.pixi/config.toml` if present).
 - **Data:** `data/` and `old/` are listed in `.gitignore`—keep large or sensitive datasets out of version control unless you intentionally add exceptions.
 - **Source & tests:** Put application code under a clear package name (e.g. `darlin/` or `src/darlin/`). Tests live under `tests/` with parallel module paths to the code they cover; larger or shared fixtures may sit under `tests/data/` (or similar) instead of the repo-root `data/` tree.
-- **Docs:** Keep command references in `docs/` aligned with CLI behavior, especially when output filenames or tabular output schemas change. For user-visible behavior or output changes, add a short entry under **Unreleased** in `docs/CHANGELOG.md`.
+- **Docs:** Keep command references in `docs/` aligned with CLI behavior, especially when output filenames or tabular output schemas change. For user-visible behavior or output changes, add a short entry under **Unreleased** in `docs/CHANGELOG.md`. **All documentation (including changelog entries) must be written in English.**
 
 ## Build, Test, and Development Commands
 
