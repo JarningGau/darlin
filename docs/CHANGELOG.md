@@ -1,17 +1,5 @@
 # Changelog
 
-Notable changes to the `darlin` command-line interface, pipeline outputs, and
-documentation in this repository.
-
-The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
-The package version in `src/darlin/__init__.py` should match the latest
-**released** section below; newer work stays under **Unreleased** until you bump
-the version.
-
-**0.1.0** is the repository tree at commit
-[`971d11c`](https://github.com/JarningGau/darlin/commit/971d11cea8fa45471cdf76d9b2def3fb4cc1176e)
-(`971d11cea8fa45471cdf76d9b2def3fb4cc1176e`).
-
 ## [Unreleased]
 
 ### Added
@@ -84,7 +72,9 @@ the version.
 
 ## [0.1.0] - 2026-05-13
 
-First documented release line; points at commit `971d11c` above.
+**0.1.0** is the repository tree at commit
+[`971d11c`](https://github.com/JarningGau/darlin/commit/971d11cea8fa45471cdf76d9b2def3fb4cc1176e)
+(`971d11cea8fa45471cdf76d9b2def3fb4cc1176e`).
 
 ---
 
