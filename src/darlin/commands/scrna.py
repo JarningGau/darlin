@@ -80,12 +80,23 @@ def _add_scrna_run(steps: argparse._SubParsersAction) -> None:
         help="Minimum reads fraction for the major LR per (CR, UR)",
     )
     p.add_argument(
-        "--reads-umis-ratio-cutoff",
+        "--k-cutoff",
         type=float,
         default=1.0,
-        help="Minimum reads/UMIs ratio per corrected cell barcode",
+        help="Minimum k = reads/UMIs ratio per corrected cell barcode",
     )
-    p.add_argument("--reads-cutoff", type=int, default=1, help="Minimum reads per molecule after QC")
+    p.add_argument(
+        "--reads-cutoff-per-cell",
+        type=int,
+        default=1,
+        help="Minimum total reads per corrected cell barcode after QC",
+    )
+    p.add_argument(
+        "--reads-cutoff-per-molecule",
+        type=int,
+        default=1,
+        help="Minimum reads per molecule retained during denoise",
+    )
     p.set_defaults(func=_scrna_run)
 
 
@@ -112,6 +123,12 @@ def _add_scrna_denoise(steps: argparse._SubParsersAction) -> None:
         default=None,
         help="Path to step1_extracted.tsv (defaults to <output-dir>/<sample-id>/step1_extracted.tsv)",
     )
+    p.add_argument(
+        "--reads-cutoff-per-molecule",
+        type=int,
+        default=1,
+        help="Minimum reads per molecule retained during denoise",
+    )
     p.add_argument("--umi-ld", type=int, default=1, help="UMI clustering threshold")
     p.add_argument("--lb-error-rate", type=float, default=0.01, help="Relative lineage barcode error rate")
     p.add_argument("--lb-min-hd", type=int, default=1, help="Minimum lineage barcode Hamming-distance threshold")
@@ -134,12 +151,17 @@ def _add_scrna_qc(steps: argparse._SubParsersAction) -> None:
         help="Minimum reads fraction for the major LR per (CR, UR)",
     )
     p.add_argument(
-        "--reads-umis-ratio-cutoff",
+        "--k-cutoff",
         type=float,
         default=1.0,
-        help="Minimum reads/UMIs ratio per corrected cell barcode",
+        help="Minimum k = reads/UMIs ratio per corrected cell barcode",
     )
-    p.add_argument("--reads-cutoff", type=int, default=1, help="Minimum reads per molecule after QC")
+    p.add_argument(
+        "--reads-cutoff-per-cell",
+        type=int,
+        default=1,
+        help="Minimum total reads per corrected cell barcode after QC",
+    )
     p.set_defaults(func=_scrna_qc)
 
 
@@ -220,8 +242,9 @@ def _scrna_run(args: argparse.Namespace) -> int:
         lb_error_rate=args.lb_error_rate,
         lb_min_hd=args.lb_min_hd,
         major_fraction_threshold_molecule=args.major_fraction_threshold_molecule,
-        reads_umis_ratio_cutoff=args.reads_umis_ratio_cutoff,
-        reads_cutoff=args.reads_cutoff,
+        k_cutoff=args.k_cutoff,
+        reads_cutoff_per_cell=args.reads_cutoff_per_cell,
+        reads_cutoff_per_molecule=args.reads_cutoff_per_molecule,
     )
 
 
@@ -282,6 +305,7 @@ def _scrna_denoise(args: argparse.Namespace) -> int:
         extracted_tsv=extracted_tsv,
         whitelist_path=whitelist_path,
         min_bc_len=args.min_bc_len,
+        reads_cutoff_per_molecule=args.reads_cutoff_per_molecule,
         umi_ld=args.umi_ld,
         lb_error_rate=args.lb_error_rate,
         lb_min_hd=args.lb_min_hd,
@@ -315,8 +339,8 @@ def _scrna_qc(args: argparse.Namespace) -> int:
     step_qc(
         denoised_tsv=denoised_tsv,
         major_fraction_threshold_molecule=args.major_fraction_threshold_molecule,
-        reads_umis_ratio_cutoff=args.reads_umis_ratio_cutoff,
-        reads_cutoff=args.reads_cutoff,
+        k_cutoff=args.k_cutoff,
+        reads_cutoff_per_cell=args.reads_cutoff_per_cell,
         paths=paths,
         logger=logger,
     )

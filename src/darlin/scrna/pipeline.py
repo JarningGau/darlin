@@ -46,8 +46,9 @@ def run_scrna_pipeline(
     lb_error_rate: float,
     lb_min_hd: int,
     major_fraction_threshold_molecule: float,
-    reads_umis_ratio_cutoff: float,
-    reads_cutoff: int,
+    k_cutoff: float,
+    reads_cutoff_per_cell: int,
+    reads_cutoff_per_molecule: int,
 ) -> int:
     paths = get_scrna_paths(output_dir=output_dir, sample_id=sample_id)
     paths.ensure_dirs()
@@ -84,6 +85,7 @@ def run_scrna_pipeline(
         extracted_tsv=paths.extracted_tsv,
         whitelist_path=whitelist_path,
         min_bc_len=min_bc_len,
+        reads_cutoff_per_molecule=reads_cutoff_per_molecule,
         umi_ld=umi_ld,
         lb_error_rate=lb_error_rate,
         lb_min_hd=lb_min_hd,
@@ -93,8 +95,8 @@ def run_scrna_pipeline(
     step_qc(
         denoised_tsv=paths.denoised_tsv,
         major_fraction_threshold_molecule=major_fraction_threshold_molecule,
-        reads_umis_ratio_cutoff=reads_umis_ratio_cutoff,
-        reads_cutoff=reads_cutoff,
+        k_cutoff=k_cutoff,
+        reads_cutoff_per_cell=reads_cutoff_per_cell,
         paths=paths,
         logger=logger,
     )

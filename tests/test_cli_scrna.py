@@ -17,6 +17,16 @@ def _run(*args: str) -> subprocess.CompletedProcess[str]:
     )
 
 
+def test_cli_scrna_qc_help_mentions_new_cutoffs() -> None:
+    r = _run("scrna", "qc", "--help")
+    assert r.returncode == 0
+    assert "--k-cutoff" in r.stdout
+    assert "--reads-cutoff-per-cell" in r.stdout
+    assert "--reads-cutoff-per-molecule" not in r.stdout
+    assert "--reads-umis-ratio-cutoff" not in r.stdout
+    assert "--reads-cutoff " not in r.stdout
+
+
 def _run_extract_fixture(tmp_path: Path) -> Path:
     sample_id = "LL837_CA"
     outdir = tmp_path / "out"

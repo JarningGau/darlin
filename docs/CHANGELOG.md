@@ -18,6 +18,9 @@ the version.
 
 ### Changed
 
+- scRNA: rename QC cutoff flags `--reads-umis-ratio-cutoff` → `--k-cutoff` and
+  `--reads-cutoff` → `--reads-cutoff-per-cell`; add `--reads-cutoff-per-molecule`.
+
 ### Removed
 
 ## [0.2.0] - 2026-05-28

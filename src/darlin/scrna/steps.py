@@ -211,6 +211,7 @@ def step_denoise(
     extracted_tsv: Path,
     whitelist_path: Path,
     min_bc_len: int,
+    reads_cutoff_per_molecule: int,
     umi_ld: int,
     lb_error_rate: float,
     lb_min_hd: int,
@@ -224,10 +225,11 @@ def step_denoise(
         .size()
         .rename(columns={"size": "reads"})
     )
-    df = df[df["LB_len"] >= min_bc_len].copy()
     log_step_title(logger, "Before denoise")
     log_molecule_summary(logger, df)
     log_step_title(logger, "Denoise (correct sequencing errors)")
+    df = df[df["LB_len"] >= min_bc_len].copy()
+    df = df[df["reads"] >= reads_cutoff_per_molecule].copy()
     ## CB -> CR
     whitelist = load_whitelist(whitelist_path)
     df["CR"] = _correct_cb_to_whitelist(df["CB"], whitelist)
@@ -265,8 +267,8 @@ def step_qc(
     *,
     denoised_tsv: Path,
     major_fraction_threshold_molecule: float,
-    reads_umis_ratio_cutoff: float,
-    reads_cutoff: int,
+    k_cutoff: float,
+    reads_cutoff_per_cell: int,
     paths: ScrnaPaths,
     logger: logging.Logger,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
@@ -287,8 +289,10 @@ def step_qc(
         cell_summary["k"] = pd.Series(dtype=float)
 
     df_merged = df_major.merge(cell_summary[["CR", "k"]], on="CR", how="left")
-    df_after_k = df_merged[df_merged["k"] >= reads_umis_ratio_cutoff].copy()
-    df_final = df_after_k[df_after_k["reads"] >= reads_cutoff].copy()
+    df_after_k = df_merged[df_merged["k"] >= k_cutoff].copy()
+
+    passing_cells = cell_summary[cell_summary["n_reads"] >= reads_cutoff_per_cell].copy()
+    df_final = df_after_k[df_after_k["CR"].isin(passing_cells["CR"])].copy()
     if len(df_final) > 0:
         df_final["n_LR"] = df_final.groupby("CR")["LR"].transform("nunique")
     else:
