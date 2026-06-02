@@ -6,6 +6,8 @@
 
 ### Changed
 
+- Bulk: scope `--help` flags per step (`pear`, `extract`, `filter`, `denoise`, `annotate`) so unused common options from `bulk run` are not advertised; mistyped flags are rejected at parse time.
+
 ### Removed
 
 ## [0.3.0] - 2026-05-28

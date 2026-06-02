@@ -7,6 +7,7 @@ import sys
 from pathlib import Path
 
 import pandas as pd
+import pytest
 
 from darlin.bulk.paths import ComboPaths
 from darlin.bulk.steps import step_finalize
@@ -325,10 +326,21 @@ def test_bulk_run_skip_pear_accepts_existing_assembled_fastq(tmp_path: Path) -> 
     assert (outdir / sample_id / "reads_1_u_1_l_0.01" / "alleles_by_umis.tsv").exists()
 
 
-def test_bulk_extract_help_no_longer_mentions_skip_pear() -> None:
-    r = _run("bulk", "extract", "--help")
+@pytest.mark.parametrize(
+    ("step", "absent_flags"),
+    [
+        ("pear", ["--umi-len", "--min-bc-len", "--reads-cutoff", "--locus"]),
+        ("extract", ["--pear-path", "--threads", "--min-bc-len", "--reads-cutoff", "--skip-pear"]),
+        ("filter", ["--pear-path", "--threads", "--umi-len"]),
+        ("denoise", ["--pear-path", "--threads", "--min-bc-len", "--umi-len"]),
+        ("annotate", ["--pear-path", "--threads", "--umi-len"]),
+    ],
+)
+def test_bulk_step_help_omits_unused_common_flags(step: str, absent_flags: list[str]) -> None:
+    r = _run("bulk", step, "--help")
     assert r.returncode == 0
-    assert "--skip-pear" not in r.stdout
+    for flag in absent_flags:
+        assert flag not in r.stdout, f"{step} help should not mention {flag}"
 
 
 def test_bulk_finalize_keeps_unannotated_rows_and_logs_counts(tmp_path: Path) -> None:

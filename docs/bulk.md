@@ -155,6 +155,7 @@ darlin bulk annotate \
 
 ## Subcommand Notes
 
+- Each step’s `--help` lists only flags that step reads (for example, `pear` exposes PEAR/thread options; `extract` exposes `--umi-len` and `--locus` but not `--pear-path`). Flags valid on `bulk run` may be absent on individual steps; passing them there fails at parse time.
 - `darlin bulk extract` and `darlin bulk denoise` accept `--no-progress` (same behavior as `bulk run`).
 - `darlin bulk pear` assembles paired-end reads and writes `pear/pear.assembled.fastq`.
 - `darlin bulk extract` can consume the default assembled FASTQ or an explicit `--assembled-fq` path.

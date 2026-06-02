@@ -9,7 +9,7 @@ smoke = "PYTHONPATH=src python -m darlin.cli --help && PYTHONPATH=src python -m 
 install-cli = "python -m pip install -e ."
 compile = "python -m compileall src tests"
 test = "pytest -q"
-test-bulk = "pytest -q tests/test_cli_bulk.py"
+test-bulk = "pytest -q tests/test_cli_bulk_dna.py"
 test-sc = "pytest -q tests/test_cli_scrna.py"
 
 [dependencies]

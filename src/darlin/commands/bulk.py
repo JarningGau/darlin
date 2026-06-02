@@ -47,7 +47,16 @@ def _bulk_main(_: argparse.Namespace) -> int:
 
 def _add_bulk_run(steps: argparse._SubParsersAction) -> None:
     p = steps.add_parser("run", help="Run the full bulk pipeline", formatter_class=HELP_FORMATTER)
-    _add_common_bulk_args(p, include_fqs=True, require_fqs=False, include_reads_cutoff=False)
+    _add_common_bulk_args(
+        p,
+        include_fqs=True,
+        require_fqs=False,
+        include_locus=True,
+        include_umi_len=True,
+        include_min_bc_len=True,
+        include_pear=True,
+        include_reads_cutoff=False,
+    )
     p.add_argument(
         "--reads-cutoff",
         type=int,
@@ -84,7 +93,7 @@ def _add_bulk_run(steps: argparse._SubParsersAction) -> None:
 
 def _add_bulk_pear(steps: argparse._SubParsersAction) -> None:
     p = steps.add_parser("pear", help="Assemble paired-end reads (PEAR)", formatter_class=HELP_FORMATTER)
-    _add_common_bulk_args(p, include_fqs=True)
+    _add_common_bulk_args(p, include_fqs=True, include_pear=True)
     p.add_argument("--log-level", type=str, default="INFO", choices=["DEBUG", "INFO", "WARNING", "ERROR"], help="Logging level")
     p.set_defaults(func=_bulk_pear)
 
@@ -95,7 +104,7 @@ def _add_bulk_extract(steps: argparse._SubParsersAction) -> None:
         help="Extract lineage barcode + UMI from assembled FASTQ",
         formatter_class=HELP_FORMATTER,
     )
-    _add_common_bulk_args(p, include_fqs=False)
+    _add_common_bulk_args(p, include_locus=True, include_umi_len=True)
     p.add_argument(
         "--assembled-fq",
         type=str,
@@ -111,7 +120,12 @@ def _add_bulk_extract(steps: argparse._SubParsersAction) -> None:
 
 def _add_bulk_filter(steps: argparse._SubParsersAction) -> None:
     p = steps.add_parser("filter", help="Filter/aggregate extracted reads", formatter_class=HELP_FORMATTER)
-    _add_common_bulk_args(p, include_fqs=False, include_reads_cutoff=True)
+    _add_common_bulk_args(
+        p,
+        include_locus=True,
+        include_min_bc_len=True,
+        include_reads_cutoff=True,
+    )
     p.add_argument(
         "--extracted",
         type=str,
@@ -124,7 +138,7 @@ def _add_bulk_filter(steps: argparse._SubParsersAction) -> None:
 
 def _add_bulk_denoise(steps: argparse._SubParsersAction) -> None:
     p = steps.add_parser("denoise", help="Denoise lineage barcodes and UMIs", formatter_class=HELP_FORMATTER)
-    _add_common_bulk_args(p, include_fqs=False)
+    _add_common_bulk_args(p, include_locus=True, include_reads_cutoff=True)
     p.add_argument(
         "--filtered",
         type=str,
@@ -145,7 +159,12 @@ def _add_bulk_annotate(steps: argparse._SubParsersAction) -> None:
         help="Annotate alleles (darlin_core) and write alleles_by_umis.tsv",
         formatter_class=HELP_FORMATTER,
     )
-    _add_common_bulk_args(p, include_fqs=False)
+    _add_common_bulk_args(
+        p,
+        include_locus=True,
+        include_min_bc_len=True,
+        include_reads_cutoff=True,
+    )
     p.add_argument("--umi-ld", type=int, default=1, help="UMI clustering threshold (for output dir naming)")
     p.add_argument("--lb-hd-relative", type=float, default=0.01, help="Relative barcode HD threshold (for output dir naming)")
     p.add_argument(
@@ -161,15 +180,22 @@ def _add_bulk_annotate(steps: argparse._SubParsersAction) -> None:
 def _add_common_bulk_args(
     p: argparse.ArgumentParser,
     *,
-    include_fqs: bool,
-    include_reads_cutoff: bool = True,
+    include_fqs: bool = False,
     require_fqs: bool = True,
+    include_locus: bool = False,
+    include_umi_len: bool = False,
+    include_min_bc_len: bool = False,
+    include_pear: bool = False,
+    include_reads_cutoff: bool = False,
 ) -> None:
     p.add_argument("--sample-id", type=str, required=True, help="Sample ID for output directory naming")
     p.add_argument("--output-dir", type=str, default="./output", help="Base output directory")
-    p.add_argument("--locus", type=str, default="Col1a1", help="Locus name (darlin-core config key)")
-    p.add_argument("--umi-len", type=int, default=12, help="UMI length")
-    p.add_argument("--min-bc-len", type=int, default=20, help="Minimum barcode length")
+    if include_locus:
+        p.add_argument("--locus", type=str, default="Col1a1", help="Locus name (darlin-core config key)")
+    if include_umi_len:
+        p.add_argument("--umi-len", type=int, default=12, help="UMI length")
+    if include_min_bc_len:
+        p.add_argument("--min-bc-len", type=int, default=20, help="Minimum barcode length")
     if include_reads_cutoff:
         p.add_argument(
             "--reads-cutoff",
@@ -177,8 +203,9 @@ def _add_common_bulk_args(
             default=1,
             help="Minimum read support per (lineage barcode, UMI) pair; applied at denoising (not at filter)",
         )
-    p.add_argument("--pear-path", type=str, default="pear", help="Path to PEAR executable")
-    p.add_argument("--threads", type=int, default=8, help="Number of threads for PEAR")
+    if include_pear:
+        p.add_argument("--pear-path", type=str, default="pear", help="Path to PEAR executable")
+        p.add_argument("--threads", type=int, default=8, help="Number of threads for PEAR")
     if include_fqs:
         p.add_argument("--fq1", type=str, required=require_fqs, help="Path to forward reads FASTQ file")
         p.add_argument("--fq2", type=str, required=require_fqs, help="Path to reverse reads FASTQ file")
