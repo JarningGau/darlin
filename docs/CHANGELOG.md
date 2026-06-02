@@ -10,6 +10,10 @@
 
 ## [0.4.0] - 2026-06-02
 
+**0.4.0** is the repository tree at commit
+[`083e4dc`](https://github.com/JarningGau/darlin/commit/083e4dc27b58ab6aeb0daf667cdd6e040286e776)
+(`083e4dc27b58ab6aeb0daf667cdd6e040286e776`).
+
 ### Added
 
 - Bulk: `darlin bulk extract` accepts `--protocol pe85-r350` with `--fq1`/`--fq2` for paired extraction without PEAR (step-wise workflows aligned with `bulk run`).
