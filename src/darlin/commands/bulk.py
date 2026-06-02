@@ -182,12 +182,6 @@ def _add_bulk_annotate(steps: argparse._SubParsersAction) -> None:
     )
     p.add_argument("--umi-ld", type=positive_int, default=1, help="UMI clustering threshold (for output dir naming)")
     p.add_argument("--lb-hd-relative", type=float, default=0.01, help="Relative barcode HD threshold (for output dir naming)")
-    p.add_argument(
-        "--denoised-barcodes",
-        type=str,
-        required=True,
-        help="Path to denoised_barcodes.tsv from `darlin bulk denoise` (includes `query` column)",
-    )
     p.add_argument("--log-level", type=str, default="INFO", choices=["DEBUG", "INFO", "WARNING", "ERROR"], help="Logging level")
     p.set_defaults(func=_bulk_annotate)
 
@@ -537,18 +531,26 @@ def _bulk_annotate(args: argparse.Namespace) -> int:
     if paths is None:
         return 1
     paths.ensure_dirs()
-    try:
-        require_valid_locus(args.locus)
-        require_readable_files([("Denoised barcodes (--denoised-barcodes)", args.denoised_barcodes)])
-    except BulkInputError as e:
-        print(e, file=sys.stderr)
-        return 1
-
     combo = paths.combo_paths(
         reads_cutoff=args.reads_cutoff,
         umi_ld=args.umi_ld,
         lb_hd_relative=args.lb_hd_relative,
     )
+    try:
+        require_valid_locus(args.locus)
+        require_readable_files(
+            [
+                (
+                    "Denoised barcodes (run `darlin bulk denoise` with matching "
+                    "--reads-cutoff, --umi-ld, --lb-hd-relative)",
+                    combo.denoised_barcodes_tsv,
+                ),
+            ]
+        )
+    except BulkInputError as e:
+        print(e, file=sys.stderr)
+        return 1
+
     combo.ensure_dir()
 
     logger = setup_logging(paths.log_file, getattr(logging, args.log_level.upper(), logging.INFO))
@@ -574,7 +576,7 @@ def _bulk_annotate(args: argparse.Namespace) -> int:
             logger=logger,
         )
     step_annotate_and_finalize(
-        denoised_barcodes_tsv=args.denoised_barcodes,
+        denoised_barcodes_tsv=combo.denoised_barcodes_tsv,
         locus=args.locus,
         min_bc_len=args.min_bc_len,
         sample_id=args.sample_id,

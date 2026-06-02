@@ -6,7 +6,11 @@
 
 ### Changed
 
+- Bulk: `darlin bulk annotate` reads `denoised_barcodes.tsv` from the combo directory set by `--reads-cutoff`, `--umi-ld`, and `--lb-hd-relative` (aligned with `denoise` / `run`); combo flags must match the prior `denoise` step.
+
 ### Removed
+
+- Bulk: `--denoised-barcodes` on `darlin bulk annotate` (use the default combo path under `<output-dir>/<sample-id>/reads_<...>/` instead).
 
 ## [0.4.0] - 2026-06-02
 

@@ -396,6 +396,100 @@ def test_bulk_extract_help_includes_protocol_and_fqs() -> None:
         assert flag in r.stdout, f"extract help should mention {flag}"
 
 
+def test_bulk_annotate_help_omits_denoised_barcodes() -> None:
+    r = _run("bulk", "annotate", "--help")
+    assert r.returncode == 0
+    assert "--denoised-barcodes" not in r.stdout
+
+
+def test_bulk_annotate_rejects_unknown_denoised_barcodes_flag(tmp_path: Path) -> None:
+    r = _run(
+        "bulk",
+        "annotate",
+        "--sample-id",
+        "L141_CA",
+        "--output-dir",
+        str(tmp_path / "out"),
+        "--denoised-barcodes",
+        str(tmp_path / "denoised_barcodes.tsv"),
+    )
+    assert r.returncode == 2, f"stdout:\n{r.stdout}\n\nstderr:\n{r.stderr}"
+    assert "Traceback" not in r.stderr
+    assert "denoised-barcodes" in r.stderr.lower() or "unrecognized" in r.stderr.lower()
+
+
+def test_bulk_annotate_missing_denoised_exits_cleanly(tmp_path: Path) -> None:
+    r = _run(
+        "bulk",
+        "annotate",
+        "--sample-id",
+        "L141_CA",
+        "--output-dir",
+        str(tmp_path / "out"),
+    )
+    assert r.returncode == 1, f"stdout:\n{r.stdout}\n\nstderr:\n{r.stderr}"
+    assert "Traceback" not in r.stderr
+    assert "denoise" in r.stderr.lower()
+    assert "denoised_barcodes.tsv" in r.stderr
+
+
+def test_bulk_annotate_step_reads_default_combo_path(tmp_path: Path) -> None:
+    fq1 = Path("tests/data/bulkdna/L141_CA_R1.fq.gz")
+    fq2 = Path("tests/data/bulkdna/L141_CA_R2.fq.gz")
+    assert fq1.exists()
+    assert fq2.exists()
+
+    sample_id = "L141_CA"
+    outdir = tmp_path / "out"
+    common = [
+        "--sample-id",
+        sample_id,
+        "--output-dir",
+        str(outdir),
+    ]
+
+    pear = _run("bulk", "pear", *common, "--fq1", str(fq1), "--fq2", str(fq2), "--threads", "1")
+    assert pear.returncode == 0, pear.stderr
+
+    extract = _run("bulk", "extract", *common, "--sample-n", "200")
+    assert extract.returncode == 0, extract.stderr
+
+    filt = _run("bulk", "filter", *common, "--min-bc-len", "20", "--reads-cutoff", "1")
+    assert filt.returncode == 0, filt.stderr
+
+    denoise = _run(
+        "bulk",
+        "denoise",
+        *common,
+        "--reads-cutoff",
+        "1",
+        "--umi-ld",
+        "1",
+        "--lb-hd-relative",
+        "0.01",
+    )
+    assert denoise.returncode == 0, denoise.stderr
+
+    combo_dir = outdir / sample_id / "reads_1_u_1_l_0.01"
+    assert (combo_dir / "denoised_barcodes.tsv").exists()
+
+    annotate = _run(
+        "bulk",
+        "annotate",
+        *common,
+        "--reads-cutoff",
+        "1",
+        "--umi-ld",
+        "1",
+        "--lb-hd-relative",
+        "0.01",
+    )
+    assert annotate.returncode == 0, f"stdout:\n{annotate.stdout}\n\nstderr:\n{annotate.stderr}"
+    assert "Traceback" not in annotate.stderr
+    assert (combo_dir / "annotated.tsv").exists()
+    assert (combo_dir / "alleles_by_umis.tsv").exists()
+
+
 def test_cli_bulk_rejects_non_positive_numeric_args(tmp_path: Path) -> None:
     r = _run(
         "bulk",

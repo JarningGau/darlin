@@ -158,8 +158,7 @@ darlin bulk annotate \
   --output-dir ./output \
   --reads-cutoff 1 \
   --umi-ld 1 \
-  --lb-hd-relative 0.01 \
-  --denoised-barcodes ./output/L141_CA/reads_1_u_1_l_0.01/denoised_barcodes.tsv
+  --lb-hd-relative 0.01
 ```
 
 ## Subcommand Notes
@@ -170,5 +169,5 @@ darlin bulk annotate \
 - `darlin bulk extract` accepts `--protocol` (default `pe250`). For `pe250`, it consumes the default assembled FASTQ or an explicit `--assembled-fq` path. For `pe85-r350`, it requires `--fq1` and `--fq2` and rejects `--assembled-fq`.
 - `darlin bulk filter` can consume the default `extracted.tsv` or an explicit `--extracted` path (length filter and aggregation only). `--reads-cutoff` is not applied at filter time; it is used for diagnostic plot cutoff lines and must match the denoise step you plan to run.
 - `darlin bulk denoise` can consume the default `filtered.tsv` or an explicit `--filtered` path.
-- `darlin bulk annotate` requires `--denoised-barcodes` and writes both `annotated.tsv` and `alleles_by_umis.tsv` under the combo directory (same naming as `darlin bulk run`). The denoised table should include `query` (as written by `denoise`, or `annotate` can add it from `LR`). If you upgrade from an older run, re-run **`extract`** (or the full pipeline) so `LB` matches canonical orientation; do not mix old `extracted.tsv` with new steps.
+- `darlin bulk annotate` reads `denoised_barcodes.tsv` from the combo directory implied by `--reads-cutoff`, `--umi-ld`, and `--lb-hd-relative` (same paths as `darlin bulk denoise` / `darlin bulk run`). It writes `annotated.tsv` and `alleles_by_umis.tsv` there. Run `denoise` with matching combo flags first. The denoised table should include `query` (as written by `denoise`, or `annotate` can add it from `LR`). If you upgrade from an older run, re-run **`extract`** (or the full pipeline) so `LB` matches canonical orientation; do not mix old `extracted.tsv` with new steps.
 
