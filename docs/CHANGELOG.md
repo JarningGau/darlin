@@ -6,6 +6,18 @@
 
 ### Changed
 
+### Removed
+
+## [0.4.1] - 2026-06-02
+
+**0.4.1** is the repository tree at commit
+[`37ef6d9`](https://github.com/JarningGau/darlin/commit/37ef6d93dab2cbfdf0859c31d525f486319ae068)
+(`37ef6d93dab2cbfdf0859c31d525f486319ae068`).
+
+### Added
+
+### Changed
+
 - Bulk: `darlin bulk annotate` reads `denoised_barcodes.tsv` from the combo directory set by `--reads-cutoff`, `--umi-ld`, and `--lb-hd-relative` (aligned with `denoise` / `run`); combo flags must match the prior `denoise` step.
 
 ### Removed
