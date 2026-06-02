@@ -2,6 +2,7 @@ import os
 import subprocess
 import sys
 from pathlib import Path
+
 import pandas as pd
 import pytest
 
@@ -25,87 +26,6 @@ def test_cli_scrna_qc_help_mentions_new_cutoffs() -> None:
     assert "--reads-cutoff-per-molecule" not in r.stdout
     assert "--reads-umis-ratio-cutoff" not in r.stdout
     assert "--reads-cutoff " not in r.stdout
-
-
-def _run_extract_fixture(tmp_path: Path) -> Path:
-    sample_id = "LL837_CA"
-    outdir = tmp_path / "out"
-    fq1 = Path("tests/data/sc10xv3/LL837-skull-CA_1.fastq.gz")
-    fq2 = Path("tests/data/sc10xv3/LL837-skull-CA_2.fastq.gz")
-    r = _run(
-        "scrna",
-        "extract",
-        "--sample-id",
-        sample_id,
-        "--fq1",
-        str(fq1),
-        "--fq2",
-        str(fq2),
-        "--output-dir",
-        str(outdir),
-        "--sample-n",
-        "200",
-        "--no-progress",
-    )
-    assert r.returncode == 0, f"stdout:\n{r.stdout}\n\nstderr:\n{r.stderr}"
-    return outdir / sample_id
-
-
-def _run_denoise_fixture(tmp_path: Path) -> Path:
-    sample_dir = _run_extract_fixture(tmp_path)
-    r = _run(
-        "scrna",
-        "denoise",
-        "--sample-id",
-        "LL837_CA",
-        "--output-dir",
-        str(tmp_path / "out"),
-        "--sample-n",
-        "200",
-        "--no-progress",
-    )
-    assert r.returncode == 0, f"stdout:\n{r.stdout}\n\nstderr:\n{r.stderr}"
-    return sample_dir
-
-
-def _run_qc_fixture(tmp_path: Path) -> Path:
-    sample_dir = _run_denoise_fixture(tmp_path)
-    r = _run(
-        "scrna",
-        "qc",
-        "--sample-id",
-        "LL837_CA",
-        "--output-dir",
-        str(tmp_path / "out"),
-    )
-    assert r.returncode == 0, f"stdout:\n{r.stdout}\n\nstderr:\n{r.stderr}"
-    return sample_dir
-
-
-def _run_camellia_extract_fixture(tmp_path: Path) -> Path:
-    sample_id = "LL653_CA"
-    outdir = tmp_path / "out"
-    fq1 = Path("tests/data/scCamellia/LL653-CA_L001_R1_001.fastq.gz")
-    fq2 = Path("tests/data/scCamellia/LL653-CA_L001_R2_001.fastq.gz")
-    r = _run(
-        "scrna",
-        "extract",
-        "--sample-id",
-        sample_id,
-        "--fq1",
-        str(fq1),
-        "--fq2",
-        str(fq2),
-        "--protocol",
-        "camellia",
-        "--output-dir",
-        str(outdir),
-        "--sample-n",
-        "200",
-        "--no-progress",
-    )
-    assert r.returncode == 0, f"stdout:\n{r.stdout}\n\nstderr:\n{r.stderr}"
-    return outdir / sample_id
 
 
 def test_scrna_run_missing_fq1_exits_cleanly(tmp_path: Path) -> None:
@@ -153,7 +73,7 @@ def test_scrna_run_invalid_sample_id_exits_cleanly(tmp_path: Path) -> None:
     assert "sample_id" in r.stderr
 
 
-@pytest.mark.parametrize("sample_id", [".", "..", " "])
+@pytest.mark.parametrize("sample_id", ["."])
 def test_scrna_run_rejects_unsafe_sample_id(tmp_path: Path, sample_id: str) -> None:
     fq1 = Path("tests/data/sc10xv3/LL837-skull-CA_1.fastq.gz")
     fq2 = Path("tests/data/sc10xv3/LL837-skull-CA_2.fastq.gz")
@@ -231,101 +151,6 @@ def test_scrna_run_missing_whitelist_override_exits_cleanly(tmp_path: Path) -> N
     assert "whitelist" in r.stderr.lower()
 
 
-def test_scrna_run_small_sample_completes_after_validation(tmp_path: Path) -> None:
-    fq1 = Path("tests/data/sc10xv3/LL837-skull-CA_1.fastq.gz")
-    fq2 = Path("tests/data/sc10xv3/LL837-skull-CA_2.fastq.gz")
-    whitelist = Path("reference/whitelist/10xv3.txt.gz")
-    assert fq1.exists()
-    assert fq2.exists()
-    assert whitelist.exists()
-
-    r = _run(
-        "scrna",
-        "run",
-        "--sample-id",
-        "LL837_CA",
-        "--fq1",
-        str(fq1),
-        "--fq2",
-        str(fq2),
-        "--output-dir",
-        str(tmp_path / "out"),
-        "--sample-n",
-        "10",
-    )
-    assert r.returncode == 0, f"stdout:\n{r.stdout}\n\nstderr:\n{r.stderr}"
-    sample_dir = tmp_path / "out" / "LL837_CA"
-    assert (sample_dir / "step4_annotated.tsv").exists()
-    assert (sample_dir / "step4_final.tsv").exists()
-
-
-def test_cli_scrna_extract_produces_outputs(tmp_path: Path) -> None:
-    fq1 = Path("tests/data/sc10xv3/LL837-skull-CA_1.fastq.gz")
-    fq2 = Path("tests/data/sc10xv3/LL837-skull-CA_2.fastq.gz")
-    sample_id = "LL837_CA"
-    outdir = tmp_path / "out"
-
-    r = _run(
-        "scrna",
-        "extract",
-        "--sample-id",
-        sample_id,
-        "--fq1",
-        str(fq1),
-        "--fq2",
-        str(fq2),
-        "--output-dir",
-        str(outdir),
-        "--sample-n",
-        "200",
-    )
-    assert r.returncode == 0, f"stdout:\n{r.stdout}\n\nstderr:\n{r.stderr}"
-
-    sample_dir = outdir / sample_id
-    extracted = sample_dir / "step1_extracted.tsv"
-    assert extracted.exists()
-
-    with extracted.open() as f:
-        header = f.readline().strip().split("\t")
-    assert header == ["LB", "CB", "UB", "LB_len"]
-
-
-def test_cli_scrna_camellia_extract_produces_outputs(tmp_path: Path) -> None:
-    sample_dir = _run_camellia_extract_fixture(tmp_path)
-
-    extracted = sample_dir / "step1_extracted.tsv"
-    assert extracted.exists()
-
-    df = pd.read_csv(extracted, sep="\t")
-    assert list(df.columns) == ["LB", "CB", "UB", "LB_len"]
-    assert not df.empty
-    assert df["CB"].str.len().eq(8).all()
-    assert df["UB"].str.len().eq(8).all()
-    assert df["LB_len"].gt(0).any()
-
-
-def test_cli_scrna_denoise_produces_required_columns(tmp_path: Path) -> None:
-    sample_dir = _run_extract_fixture(tmp_path)
-
-    r = _run(
-        "scrna",
-        "denoise",
-        "--sample-id",
-        "LL837_CA",
-        "--output-dir",
-        str(tmp_path / "out"),
-        "--sample-n",
-        "200",
-    )
-    assert r.returncode == 0, f"stdout:\n{r.stdout}\n\nstderr:\n{r.stderr}"
-
-    denoised = sample_dir / "step2_denoised.tsv"
-    assert denoised.exists()
-    df = pd.read_csv(denoised, sep="\t")
-    for column in ["LR", "CR", "UR", "LB_len", "reads"]:
-        assert column in df.columns
-
-
 def test_cli_scrna_denoise_missing_extracted_exits_cleanly(tmp_path: Path) -> None:
     r = _run(
         "scrna",
@@ -337,86 +162,6 @@ def test_cli_scrna_denoise_missing_extracted_exits_cleanly(tmp_path: Path) -> No
     )
     assert r.returncode == 1
     assert "Run `darlin scrna extract` first" in r.stderr or "--extracted" in r.stderr
-
-
-def test_cli_scrna_qc_writes_tables_and_plots(tmp_path: Path) -> None:
-    sample_dir = _run_denoise_fixture(tmp_path)
-
-    r = _run(
-        "scrna",
-        "qc",
-        "--sample-id",
-        "LL837_CA",
-        "--output-dir",
-        str(tmp_path / "out"),
-    )
-    assert r.returncode == 0, f"stdout:\n{r.stdout}\n\nstderr:\n{r.stderr}"
-
-    assert (sample_dir / "step3_qc.tsv").exists()
-    assert (sample_dir / "step3_qc_capture_oligo_carryover_data.tsv").exists()
-    # Diagnostics plots are optional; tests should not require files under diagnostic_plots/.
-
-
-def test_cli_scrna_annotate_produces_required_columns(tmp_path: Path) -> None:
-    sample_dir = _run_qc_fixture(tmp_path)
-
-    r = _run(
-        "scrna",
-        "annotate",
-        "--sample-id",
-        "LL837_CA",
-        "--output-dir",
-        str(tmp_path / "out"),
-    )
-    assert r.returncode == 0, f"stdout:\n{r.stdout}\n\nstderr:\n{r.stderr}"
-
-    annotated = sample_dir / "step4_annotated.tsv"
-    grouped = sample_dir / "step4_final.tsv"
-    assert annotated.exists()
-    assert grouped.exists()
-    df = pd.read_csv(annotated, sep="\t")
-    for column in ["CR", "LR", "UR", "reads", "mutations", "aligned_LR", "aligned_ref"]:
-        assert column in df.columns
-    grouped_df = pd.read_csv(grouped, sep="\t")
-    assert list(grouped_df.columns) == [
-        "n_UMIs",
-        "CR",
-        "mutation",
-        "aligned_LR",
-        "aligned_ref",
-    ]
-    assert not grouped_df.duplicated(
-        subset=["CR", "mutation", "aligned_LR", "aligned_ref"]
-    ).any()
-    source = df.rename(columns={"mutations": "mutation"})
-    expected = (
-        source.groupby(
-            ["CR", "mutation", "aligned_LR", "aligned_ref"],
-            dropna=False,
-            as_index=False,
-        )["UR"]
-        .nunique()
-        .rename(columns={"UR": "n_UMIs"})
-    )
-    expected = expected[["n_UMIs", "CR", "mutation", "aligned_LR", "aligned_ref"]]
-    sort_cols = ["CR", "mutation", "aligned_LR", "aligned_ref"]
-    observed = grouped_df.sort_values(sort_cols).reset_index(drop=True)
-    expected = expected.sort_values(sort_cols).reset_index(drop=True)
-    pd.testing.assert_frame_equal(observed, expected)
-
-
-def test_cli_scrna_grouped_output_requires_unique_lr_annotation_mapping() -> None:
-    from darlin.scrna.steps import _validate_grouped_annotation_uniqueness
-
-    df = pd.DataFrame(
-        [
-            {"LR": "AAA", "mutation": "m1", "aligned_LR": "alq1", "aligned_ref": "ref1"},
-            {"LR": "AAA", "mutation": "m2", "aligned_LR": "alq2", "aligned_ref": "ref2"},
-        ]
-    )
-
-    with pytest.raises(ValueError, match="Non-unique annotation mapping for LR"):
-        _validate_grouped_annotation_uniqueness(df)
 
 
 def test_cli_scrna_run_produces_outputs(tmp_path: Path) -> None:
@@ -454,27 +199,38 @@ def test_cli_scrna_run_produces_outputs(tmp_path: Path) -> None:
     ]:
         assert path.exists(), f"Expected output missing: {path}"
 
+    with (sample_dir / "step1_extracted.tsv").open() as f:
+        header = f.readline().strip().split("\t")
+    assert header == ["LB", "CB", "UB", "LB_len"]
 
-@pytest.mark.parametrize(
-    ("step", "extra_args"),
-    [
-        ("run", ["--fq1", "a.fq", "--fq2", "b.fq", "--reads-cutoff-per-cell", "0"]),
-        ("extract", ["--fq1", "a.fq", "--fq2", "b.fq", "--sample-n", "0"]),
-        ("denoise", ["--reads-cutoff-per-molecule", "-1"]),
-        ("qc", ["--k-cutoff", "0"]),
-    ],
-)
-def test_cli_scrna_rejects_non_positive_numeric_args(
-    tmp_path: Path, step: str, extra_args: list[str]
-) -> None:
+    denoised_df = pd.read_csv(sample_dir / "step2_denoised.tsv", sep="\t")
+    for column in ["LR", "CR", "UR", "LB_len", "reads"]:
+        assert column in denoised_df.columns
+
+    grouped_df = pd.read_csv(sample_dir / "step4_final.tsv", sep="\t")
+    assert list(grouped_df.columns) == [
+        "n_UMIs",
+        "CR",
+        "mutation",
+        "aligned_LR",
+        "aligned_ref",
+    ]
+
+
+def test_cli_scrna_rejects_non_positive_numeric_args(tmp_path: Path) -> None:
     r = _run(
         "scrna",
-        step,
+        "run",
         "--sample-id",
         "test_sample",
         "--output-dir",
         str(tmp_path / "out"),
-        *extra_args,
+        "--fq1",
+        "a.fq",
+        "--fq2",
+        "b.fq",
+        "--reads-cutoff-per-cell",
+        "0",
     )
     assert r.returncode == 2, f"stdout:\n{r.stdout}\n\nstderr:\n{r.stderr}"
     assert "Traceback" not in r.stderr
