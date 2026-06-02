@@ -118,6 +118,84 @@ def test_cli_bulk_run_reads_cutoff_list_produces_multiple_combo_dirs(tmp_path: P
     assert (sample_dir / "reads_2_u_1_l_0.01" / "alleles_by_umis.tsv").exists()
 
 
+def test_cli_bulk_extract_pe85_r350_produces_extracted(tmp_path: Path) -> None:
+    fq1 = Path("tests/data/bulkdna-f85r350/C126_CA_R1.fq.gz")
+    fq2 = Path("tests/data/bulkdna-f85r350/C126_CA_R2.fq.gz")
+    assert fq1.exists()
+    assert fq2.exists()
+
+    sample_id = "C126_CA"
+    outdir = tmp_path / "out"
+
+    r = _run(
+        "bulk",
+        "extract",
+        "--sample-id",
+        sample_id,
+        "--protocol",
+        "pe85-r350",
+        "--fq1",
+        str(fq1),
+        "--fq2",
+        str(fq2),
+        "--output-dir",
+        str(outdir),
+        "--sample-n",
+        "200",
+    )
+    assert r.returncode == 0, f"stdout:\n{r.stdout}\n\nstderr:\n{r.stderr}"
+    assert "Traceback" not in r.stderr
+
+    extracted = outdir / sample_id / "extracted.tsv"
+    log_file = outdir / sample_id / "run.log"
+    assert extracted.exists()
+    assert log_file.exists()
+    assert "Extract (paired):" in log_file.read_text()
+
+
+def test_cli_bulk_extract_pe85_r350_rejects_assembled_fq(tmp_path: Path) -> None:
+    fq1 = Path("tests/data/bulkdna-f85r350/C126_CA_R1.fq.gz")
+    fq2 = Path("tests/data/bulkdna-f85r350/C126_CA_R2.fq.gz")
+    assert fq1.exists()
+    assert fq2.exists()
+
+    r = _run(
+        "bulk",
+        "extract",
+        "--sample-id",
+        "C126_CA",
+        "--protocol",
+        "pe85-r350",
+        "--fq1",
+        str(fq1),
+        "--fq2",
+        str(fq2),
+        "--assembled-fq",
+        str(fq1),
+        "--output-dir",
+        str(tmp_path / "out"),
+    )
+    assert r.returncode == 1
+    assert "Traceback" not in r.stderr
+    assert "--assembled-fq" in r.stderr
+
+
+def test_cli_bulk_extract_pe85_r350_missing_fqs(tmp_path: Path) -> None:
+    r = _run(
+        "bulk",
+        "extract",
+        "--sample-id",
+        "C126_CA",
+        "--protocol",
+        "pe85-r350",
+        "--output-dir",
+        str(tmp_path / "out"),
+    )
+    assert r.returncode == 1
+    assert "Traceback" not in r.stderr
+    assert "--fq1" in r.stderr or "pe85-r350" in r.stderr
+
+
 def test_cli_bulk_run_pe85_r350_rejects_skip_pear(tmp_path: Path) -> None:
     fq1 = Path("tests/data/bulkdna-f85r350/C126_CA_R1.fq.gz")
     fq2 = Path("tests/data/bulkdna-f85r350/C126_CA_R2.fq.gz")
@@ -341,6 +419,13 @@ def test_bulk_step_help_omits_unused_common_flags(step: str, absent_flags: list[
     assert r.returncode == 0
     for flag in absent_flags:
         assert flag not in r.stdout, f"{step} help should not mention {flag}"
+
+
+def test_bulk_extract_help_includes_protocol_and_fqs() -> None:
+    r = _run("bulk", "extract", "--help")
+    assert r.returncode == 0
+    for flag in ("--protocol", "--fq1", "--fq2"):
+        assert flag in r.stdout, f"extract help should mention {flag}"
 
 
 def test_bulk_finalize_keeps_unannotated_rows_and_logs_counts(tmp_path: Path) -> None:

@@ -40,6 +40,12 @@ def test_bulk_run_help_mentions_protocol() -> None:
     assert "--protocol" in r.stdout
 
 
+def test_bulk_extract_help_mentions_protocol() -> None:
+    r = _run("bulk", "extract", "--help")
+    assert r.returncode == 0
+    assert "--protocol" in r.stdout
+
+
 def test_scrna_help_mentions_steps() -> None:
     r = _run("scrna", "--help")
     assert r.returncode == 0

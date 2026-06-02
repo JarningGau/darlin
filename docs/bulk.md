@@ -131,6 +131,15 @@ darlin bulk extract \
   --output-dir ./output \
   --sample-n 200
 
+# pe85-r350: skip PEAR; extract directly from paired FASTQs
+darlin bulk extract \
+  --sample-id C126_CA \
+  --protocol pe85-r350 \
+  --fq1 tests/data/bulkdna-f85r350/C126_CA_R1.fq.gz \
+  --fq2 tests/data/bulkdna-f85r350/C126_CA_R2.fq.gz \
+  --output-dir ./output \
+  --sample-n 200
+
 darlin bulk filter \
   --sample-id L141_CA \
   --output-dir ./output \
@@ -155,10 +164,10 @@ darlin bulk annotate \
 
 ## Subcommand Notes
 
-- Each step’s `--help` lists only flags that step reads (for example, `pear` exposes PEAR/thread options; `extract` exposes `--umi-len` and `--locus` but not `--pear-path`). Flags valid on `bulk run` may be absent on individual steps; passing them there fails at parse time.
+- Each step’s `--help` lists only flags that step reads (for example, `pear` exposes PEAR/thread options; `extract` exposes `--protocol`, `--umi-len`, and `--locus` but not `--pear-path`). Flags valid on `bulk run` may be absent on individual steps; passing them there fails at parse time.
 - `darlin bulk extract` and `darlin bulk denoise` accept `--no-progress` (same behavior as `bulk run`).
-- `darlin bulk pear` assembles paired-end reads and writes `pear/pear.assembled.fastq`.
-- `darlin bulk extract` can consume the default assembled FASTQ or an explicit `--assembled-fq` path.
+- `darlin bulk pear` assembles paired-end reads and writes `pear/pear.assembled.fastq` (`pe250` only).
+- `darlin bulk extract` accepts `--protocol` (default `pe250`). For `pe250`, it consumes the default assembled FASTQ or an explicit `--assembled-fq` path. For `pe85-r350`, it requires `--fq1` and `--fq2` and rejects `--assembled-fq`.
 - `darlin bulk filter` can consume the default `extracted.tsv` or an explicit `--extracted` path (length filter and aggregation only). `--reads-cutoff` is not applied at filter time; it is used for diagnostic plot cutoff lines and must match the denoise step you plan to run.
 - `darlin bulk denoise` can consume the default `filtered.tsv` or an explicit `--filtered` path.
 - `darlin bulk annotate` requires `--denoised-barcodes` and writes both `annotated.tsv` and `alleles_by_umis.tsv` under the combo directory (same naming as `darlin bulk run`). The denoised table should include `query` (as written by `denoise`, or `annotate` can add it from `LR`). If you upgrade from an older run, re-run **`extract`** (or the full pipeline) so `LB` matches canonical orientation; do not mix old `extracted.tsv` with new steps.

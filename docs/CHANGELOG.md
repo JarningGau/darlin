@@ -4,6 +4,8 @@
 
 ### Added
 
+- Bulk: `darlin bulk extract` accepts `--protocol pe85-r350` with `--fq1`/`--fq2` for paired extraction without PEAR (step-wise workflows aligned with `bulk run`).
+
 ### Changed
 
 - Bulk: scope `--help` flags per step (`pear`, `extract`, `filter`, `denoise`, `annotate`) so unused common options from `bulk run` are not advertised; mistyped flags are rejected at parse time.

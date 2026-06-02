@@ -101,15 +101,29 @@ def _add_bulk_pear(steps: argparse._SubParsersAction) -> None:
 def _add_bulk_extract(steps: argparse._SubParsersAction) -> None:
     p = steps.add_parser(
         "extract",
-        help="Extract lineage barcode + UMI from assembled FASTQ",
+        help="Extract lineage barcode + UMI from assembled FASTQ (pe250) or paired FASTQs (pe85-r350)",
         formatter_class=HELP_FORMATTER,
     )
-    _add_common_bulk_args(p, include_locus=True, include_umi_len=True)
+    _add_common_bulk_args(
+        p,
+        include_fqs=True,
+        require_fqs=False,
+        include_locus=True,
+        include_umi_len=True,
+    )
+    p.add_argument(
+        "--protocol",
+        type=str,
+        choices=["pe250", "pe85-r350"],
+        default="pe250",
+        help="Library layout: pe250 extracts from assembled reads; "
+        "pe85-r350 extracts from paired R1/R2 without PEAR",
+    )
     p.add_argument(
         "--assembled-fq",
         type=str,
         default=None,
-        help="Path to assembled FASTQ (defaults to <output-dir>/<sample-id>/pear/pear.assembled.fastq)",
+        help="Path to assembled FASTQ for pe250 (defaults to <output-dir>/<sample-id>/pear/pear.assembled.fastq)",
     )
     p.add_argument("--log-level", type=str, default="INFO", choices=["DEBUG", "INFO", "WARNING", "ERROR"], help="Logging level")
     p.add_argument("--no-progress", action="store_true", help="Disable tqdm progress bars (cleaner logs for batch/CI)")
@@ -324,36 +338,73 @@ def _bulk_extract(args: argparse.Namespace) -> int:
     import logging
 
     from darlin.bulk.logging import setup_logging
-    from darlin.bulk.pipeline import resolve_bulk_primers
-    from darlin.bulk.steps import step_extract
+    from darlin.bulk.pipeline import resolve_bulk_primers, resolve_bulk_primers_paired
+    from darlin.bulk.steps import step_extract, step_extract_paired
 
     paths = _get_bulk_paths_cli(args.output_dir, args.sample_id)
     if paths is None:
         return 1
     paths.ensure_dirs()
-    assembled = Path(args.assembled_fq) if args.assembled_fq else paths.assembled_fastq
+    protocol = str(args.protocol)
     try:
-        require_readable_files([("Assembled FASTQ (--assembled-fq or default pear output)", assembled)])
+        if protocol == "pe85-r350":
+            if args.assembled_fq:
+                raise BulkInputError(
+                    "--assembled-fq is only for pe250; protocol pe85-r350 uses paired FASTQs (--fq1/--fq2)"
+                )
+            missing_fqs: list[str] = []
+            if not args.fq1:
+                missing_fqs.append("--fq1")
+            if not args.fq2:
+                missing_fqs.append("--fq2")
+            if missing_fqs:
+                raise BulkInputError(
+                    "Missing required input files for protocol pe85-r350:\n  " + ", ".join(missing_fqs)
+                )
+            require_readable_files(
+                [
+                    ("Forward reads (--fq1)", args.fq1),
+                    ("Reverse reads (--fq2)", args.fq2),
+                ]
+            )
+        else:
+            assembled = Path(args.assembled_fq) if args.assembled_fq else paths.assembled_fastq
+            require_readable_files([("Assembled FASTQ (--assembled-fq or default pear output)", assembled)])
     except BulkInputError as e:
         print(e, file=sys.stderr)
-        print("Run `darlin bulk pear` first, or pass `--assembled-fq`.", file=sys.stderr)
+        if protocol == "pe250":
+            print("Run `darlin bulk pear` first, or pass `--assembled-fq`.", file=sys.stderr)
         return 1
 
     logger = setup_logging(paths.log_file, getattr(logging, args.log_level.upper(), logging.INFO))
-
-    _unedited, p3_rc, p5_rc = resolve_bulk_primers(locus=args.locus)
-
     max_reads = args.sample_n if args.sample_n is not None else (2500 if args.test else None)
-    step_extract(
-        assembled_fastq=assembled,
-        umi_len=args.umi_len,
-        p3_seq=p3_rc,
-        p5_seq=p5_rc,
-        paths=paths,
-        max_reads=max_reads,
-        logger=logger,
-        show_progress=not bool(args.no_progress),
-    )
+
+    if protocol == "pe85-r350":
+        _unedited, p3_fwd, p5_fwd = resolve_bulk_primers_paired(locus=args.locus)
+        step_extract_paired(
+            fq1=args.fq1,
+            fq2=args.fq2,
+            umi_len=args.umi_len,
+            p3_seq=p3_fwd,
+            p5_seq=p5_fwd,
+            paths=paths,
+            max_reads=max_reads,
+            logger=logger,
+            show_progress=not bool(args.no_progress),
+        )
+    else:
+        assembled = Path(args.assembled_fq) if args.assembled_fq else paths.assembled_fastq
+        _unedited, p3_rc, p5_rc = resolve_bulk_primers(locus=args.locus)
+        step_extract(
+            assembled_fastq=assembled,
+            umi_len=args.umi_len,
+            p3_seq=p3_rc,
+            p5_seq=p5_rc,
+            paths=paths,
+            max_reads=max_reads,
+            logger=logger,
+            show_progress=not bool(args.no_progress),
+        )
     return 0
 
 
