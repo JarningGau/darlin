@@ -5,6 +5,7 @@ import sys
 from pathlib import Path
 
 from darlin.bulk.validate import BulkInputError, require_pear_executable, require_readable_files, require_valid_locus
+from darlin.cli_types import positive_int
 
 HELP_FORMATTER = argparse.ArgumentDefaultsHelpFormatter
 
@@ -59,7 +60,7 @@ def _add_bulk_run(steps: argparse._SubParsersAction) -> None:
     )
     p.add_argument(
         "--reads-cutoff",
-        type=int,
+        type=positive_int,
         nargs="+",
         default=[1],
         help="Minimum read support per (lineage barcode, UMI) pair; applied at denoising (not at filter). "
@@ -81,13 +82,13 @@ def _add_bulk_run(steps: argparse._SubParsersAction) -> None:
         help="Path to assembled FASTQ when using --skip-pear (defaults to <output-dir>/<sample-id>/pear/pear.assembled.fastq)",
     )
     p.add_argument("--keep-pear", action="store_true", help="Keep PEAR output directory after completion")
-    p.add_argument("--denoise-iter", type=int, default=1, help="Number of denoising iterations")
-    p.add_argument("--umi-ld", type=int, nargs="+", default=[1], help="List of UMI clustering thresholds")
+    p.add_argument("--denoise-iter", type=positive_int, default=1, help="Number of denoising iterations")
+    p.add_argument("--umi-ld", type=positive_int, nargs="+", default=[1], help="List of UMI clustering thresholds")
     p.add_argument("--lb-hd-relative", type=float, nargs="+", default=[0.01], help="List of relative barcode HD thresholds")
     p.add_argument("--log-level", type=str, default="INFO", choices=["DEBUG", "INFO", "WARNING", "ERROR"], help="Logging level")
     p.add_argument("--no-progress", action="store_true", help="Disable tqdm progress bars (cleaner logs for batch/CI)")
     p.add_argument("--test", action="store_true", help="Test mode: only process first ~2500 reads")
-    p.add_argument("--sample-n", type=int, default=None, help="Sample first N reads")
+    p.add_argument("--sample-n", type=positive_int, default=None, help="Sample first N reads")
     p.set_defaults(func=_bulk_run)
 
 
@@ -128,7 +129,7 @@ def _add_bulk_extract(steps: argparse._SubParsersAction) -> None:
     p.add_argument("--log-level", type=str, default="INFO", choices=["DEBUG", "INFO", "WARNING", "ERROR"], help="Logging level")
     p.add_argument("--no-progress", action="store_true", help="Disable tqdm progress bars (cleaner logs for batch/CI)")
     p.add_argument("--test", action="store_true", help="Test mode: only process first ~2500 reads")
-    p.add_argument("--sample-n", type=int, default=None, help="Sample first N reads")
+    p.add_argument("--sample-n", type=positive_int, default=None, help="Sample first N reads")
     p.set_defaults(func=_bulk_extract)
 
 
@@ -159,8 +160,8 @@ def _add_bulk_denoise(steps: argparse._SubParsersAction) -> None:
         default=None,
         help="Path to filtered.tsv (defaults to <output-dir>/<sample-id>/filtered.tsv)",
     )
-    p.add_argument("--denoise-iter", type=int, default=1, help="Number of denoising iterations")
-    p.add_argument("--umi-ld", type=int, default=1, help="UMI clustering threshold")
+    p.add_argument("--denoise-iter", type=positive_int, default=1, help="Number of denoising iterations")
+    p.add_argument("--umi-ld", type=positive_int, default=1, help="UMI clustering threshold")
     p.add_argument("--lb-hd-relative", type=float, default=0.01, help="Relative barcode HD threshold")
     p.add_argument("--log-level", type=str, default="INFO", choices=["DEBUG", "INFO", "WARNING", "ERROR"], help="Logging level")
     p.add_argument("--no-progress", action="store_true", help="Disable tqdm progress bars (cleaner logs for batch/CI)")
@@ -179,7 +180,7 @@ def _add_bulk_annotate(steps: argparse._SubParsersAction) -> None:
         include_min_bc_len=True,
         include_reads_cutoff=True,
     )
-    p.add_argument("--umi-ld", type=int, default=1, help="UMI clustering threshold (for output dir naming)")
+    p.add_argument("--umi-ld", type=positive_int, default=1, help="UMI clustering threshold (for output dir naming)")
     p.add_argument("--lb-hd-relative", type=float, default=0.01, help="Relative barcode HD threshold (for output dir naming)")
     p.add_argument(
         "--denoised-barcodes",
@@ -207,19 +208,19 @@ def _add_common_bulk_args(
     if include_locus:
         p.add_argument("--locus", type=str, default="Col1a1", help="Locus name (darlin-core config key)")
     if include_umi_len:
-        p.add_argument("--umi-len", type=int, default=12, help="UMI length")
+        p.add_argument("--umi-len", type=positive_int, default=12, help="UMI length")
     if include_min_bc_len:
-        p.add_argument("--min-bc-len", type=int, default=20, help="Minimum barcode length")
+        p.add_argument("--min-bc-len", type=positive_int, default=20, help="Minimum barcode length")
     if include_reads_cutoff:
         p.add_argument(
             "--reads-cutoff",
-            type=int,
+            type=positive_int,
             default=1,
             help="Minimum read support per (lineage barcode, UMI) pair; applied at denoising (not at filter)",
         )
     if include_pear:
         p.add_argument("--pear-path", type=str, default="pear", help="Path to PEAR executable")
-        p.add_argument("--threads", type=int, default=8, help="Number of threads for PEAR")
+        p.add_argument("--threads", type=positive_int, default=8, help="Number of threads for PEAR")
     if include_fqs:
         p.add_argument("--fq1", type=str, required=require_fqs, help="Path to forward reads FASTQ file")
         p.add_argument("--fq2", type=str, required=require_fqs, help="Path to reverse reads FASTQ file")

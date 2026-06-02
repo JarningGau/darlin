@@ -4,6 +4,7 @@ import argparse
 import sys
 from pathlib import Path
 
+from darlin.cli_types import positive_float, positive_int
 from darlin.scrna.validate import ScrnaInputError, require_protocol, require_readable_files, resolve_whitelist_path
 
 HELP_FORMATTER = argparse.ArgumentDefaultsHelpFormatter
@@ -50,8 +51,8 @@ def _add_common_scrna_args(
     )
     p.add_argument("--no-progress", action="store_true", help="Disable tqdm progress bars")
     p.add_argument("--test", action="store_true", help="Test mode: only process first ~2500 read pairs")
-    p.add_argument("--sample-n", type=int, default=None, help="Process first N read pairs")
-    p.add_argument("--min-bc-len", type=int, default=20, help="Minimum lineage barcode length")
+    p.add_argument("--sample-n", type=positive_int, default=None, help="Process first N read pairs")
+    p.add_argument("--min-bc-len", type=positive_int, default=20, help="Minimum lineage barcode length")
     if include_fqs:
         p.add_argument(
             "--fq1",
@@ -70,30 +71,30 @@ def _add_common_scrna_args(
 def _add_scrna_run(steps: argparse._SubParsersAction) -> None:
     p = steps.add_parser("run", help="Run the full scrna pipeline", formatter_class=HELP_FORMATTER)
     _add_common_scrna_args(p, include_fqs=True)
-    p.add_argument("--umi-ld", type=int, default=1, help="UMI clustering threshold")
-    p.add_argument("--lb-error-rate", type=float, default=0.01, help="Relative lineage barcode error rate")
-    p.add_argument("--lb-min-hd", type=int, default=1, help="Minimum lineage barcode Hamming-distance threshold")
+    p.add_argument("--umi-ld", type=positive_int, default=1, help="UMI clustering threshold")
+    p.add_argument("--lb-error-rate", type=positive_float, default=0.01, help="Relative lineage barcode error rate")
+    p.add_argument("--lb-min-hd", type=positive_int, default=1, help="Minimum lineage barcode Hamming-distance threshold")
     p.add_argument(
         "--major-fraction-threshold-molecule",
-        type=float,
+        type=positive_float,
         default=0.8,
         help="Minimum reads fraction for the major LR per (CR, UR)",
     )
     p.add_argument(
         "--k-cutoff",
-        type=float,
+        type=positive_float,
         default=1.0,
         help="Minimum k = reads/UMIs ratio per corrected cell barcode",
     )
     p.add_argument(
         "--reads-cutoff-per-cell",
-        type=int,
+        type=positive_int,
         default=1,
         help="Minimum total reads per corrected cell barcode after QC",
     )
     p.add_argument(
         "--reads-cutoff-per-molecule",
-        type=int,
+        type=positive_int,
         default=1,
         help="Minimum reads per molecule retained during denoise",
     )
@@ -125,13 +126,13 @@ def _add_scrna_denoise(steps: argparse._SubParsersAction) -> None:
     )
     p.add_argument(
         "--reads-cutoff-per-molecule",
-        type=int,
+        type=positive_int,
         default=1,
         help="Minimum reads per molecule retained during denoise",
     )
-    p.add_argument("--umi-ld", type=int, default=1, help="UMI clustering threshold")
-    p.add_argument("--lb-error-rate", type=float, default=0.01, help="Relative lineage barcode error rate")
-    p.add_argument("--lb-min-hd", type=int, default=1, help="Minimum lineage barcode Hamming-distance threshold")
+    p.add_argument("--umi-ld", type=positive_int, default=1, help="UMI clustering threshold")
+    p.add_argument("--lb-error-rate", type=positive_float, default=0.01, help="Relative lineage barcode error rate")
+    p.add_argument("--lb-min-hd", type=positive_int, default=1, help="Minimum lineage barcode Hamming-distance threshold")
     p.set_defaults(func=_scrna_denoise)
 
 
@@ -146,19 +147,19 @@ def _add_scrna_qc(steps: argparse._SubParsersAction) -> None:
     )
     p.add_argument(
         "--major-fraction-threshold-molecule",
-        type=float,
+        type=positive_float,
         default=0.8,
         help="Minimum reads fraction for the major LR per (CR, UR)",
     )
     p.add_argument(
         "--k-cutoff",
-        type=float,
+        type=positive_float,
         default=1.0,
         help="Minimum k = reads/UMIs ratio per corrected cell barcode",
     )
     p.add_argument(
         "--reads-cutoff-per-cell",
-        type=int,
+        type=positive_int,
         default=1,
         help="Minimum total reads per corrected cell barcode after QC",
     )

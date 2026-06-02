@@ -477,6 +477,34 @@ def test_bulk_extract_help_includes_protocol_and_fqs() -> None:
         assert flag in r.stdout, f"extract help should mention {flag}"
 
 
+@pytest.mark.parametrize(
+    ("step", "extra_args"),
+    [
+        ("pear", ["--fq1", "a.fq", "--fq2", "b.fq", "--threads", "0"]),
+        ("run", ["--reads-cutoff", "0"]),
+        ("extract", ["--sample-n", "-1"]),
+        ("filter", ["--min-bc-len", "0"]),
+        ("denoise", ["--denoise-iter", "0"]),
+        ("annotate", ["--denoised-barcodes", "denoised.tsv", "--umi-ld", "0"]),
+    ],
+)
+def test_cli_bulk_rejects_non_positive_numeric_args(
+    tmp_path: Path, step: str, extra_args: list[str]
+) -> None:
+    r = _run(
+        "bulk",
+        step,
+        "--sample-id",
+        "test_sample",
+        "--output-dir",
+        str(tmp_path / "out"),
+        *extra_args,
+    )
+    assert r.returncode == 2, f"stdout:\n{r.stdout}\n\nstderr:\n{r.stderr}"
+    assert "Traceback" not in r.stderr
+    assert "positive" in r.stderr.lower()
+
+
 def test_bulk_finalize_keeps_unannotated_rows_and_logs_counts(tmp_path: Path) -> None:
     combo = ComboPaths(
         dir=tmp_path / "reads_1_u_1_l_0.01",

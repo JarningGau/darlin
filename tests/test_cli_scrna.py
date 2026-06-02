@@ -455,6 +455,32 @@ def test_cli_scrna_run_produces_outputs(tmp_path: Path) -> None:
         assert path.exists(), f"Expected output missing: {path}"
 
 
+@pytest.mark.parametrize(
+    ("step", "extra_args"),
+    [
+        ("run", ["--fq1", "a.fq", "--fq2", "b.fq", "--reads-cutoff-per-cell", "0"]),
+        ("extract", ["--fq1", "a.fq", "--fq2", "b.fq", "--sample-n", "0"]),
+        ("denoise", ["--reads-cutoff-per-molecule", "-1"]),
+        ("qc", ["--k-cutoff", "0"]),
+    ],
+)
+def test_cli_scrna_rejects_non_positive_numeric_args(
+    tmp_path: Path, step: str, extra_args: list[str]
+) -> None:
+    r = _run(
+        "scrna",
+        step,
+        "--sample-id",
+        "test_sample",
+        "--output-dir",
+        str(tmp_path / "out"),
+        *extra_args,
+    )
+    assert r.returncode == 2, f"stdout:\n{r.stdout}\n\nstderr:\n{r.stderr}"
+    assert "Traceback" not in r.stderr
+    assert "positive" in r.stderr.lower()
+
+
 def test_cli_scrna_camellia_run_produces_outputs(tmp_path: Path) -> None:
     fq1 = Path("tests/data/scCamellia/LL653-CA_L001_R1_001.fastq.gz")
     fq2 = Path("tests/data/scCamellia/LL653-CA_L001_R2_001.fastq.gz")
