@@ -4,6 +4,14 @@
 
 ### Added
 
+### Changed
+
+### Removed
+
+## [0.4.0] - 2026-06-02
+
+### Added
+
 - Bulk: `darlin bulk extract` accepts `--protocol pe85-r350` with `--fq1`/`--fq2` for paired extraction without PEAR (step-wise workflows aligned with `bulk run`).
 
 ### Changed
