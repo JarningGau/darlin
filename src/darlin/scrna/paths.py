@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
+from darlin.paths_common import validate_sample_id
+
 
 @dataclass(frozen=True)
 class ScrnaPaths:
@@ -22,8 +24,7 @@ class ScrnaPaths:
 
 
 def get_scrna_paths(output_dir: str | Path, sample_id: str) -> ScrnaPaths:
-    if "/" in sample_id or "\\" in sample_id:
-        raise ValueError("sample_id must be a single path segment without path separators")
+    validate_sample_id(sample_id)
     sample_dir = Path(output_dir) / sample_id
     diagnostics_dir = sample_dir / "diagnostic_plots"
     return ScrnaPaths(

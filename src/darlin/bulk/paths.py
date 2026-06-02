@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
+from darlin.paths_common import validate_sample_id
+
 
 @dataclass(frozen=True)
 class ComboPaths:
@@ -49,8 +51,7 @@ class BulkPaths:
 
 
 def get_bulk_paths(output_dir: str | Path, sample_id: str) -> BulkPaths:
-    if not sample_id or "/" in sample_id or "\\" in sample_id:
-        raise ValueError(f"sample_id must be a simple name without path separators: {sample_id!r}")
+    validate_sample_id(sample_id)
     base = Path(output_dir)
     sample_dir = base / sample_id
     pear_dir = sample_dir / "pear"

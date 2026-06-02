@@ -39,3 +39,14 @@ def require_pear_executable(pear_path: str) -> None:
             raise BulkInputError(f"PEAR executable not found: {pear_path}")
     elif shutil.which(pear_path) is None:
         raise BulkInputError(f"PEAR executable not found in PATH: {pear_path}")
+
+
+def require_valid_locus(locus: str) -> None:
+    try:
+        from darlin_core.config.amplicon_configs import load_carlin_config_by_locus  # type: ignore
+
+        load_carlin_config_by_locus(locus=locus)
+    except ValueError as e:
+        raise BulkInputError(str(e)) from e
+    except FileNotFoundError as e:
+        raise BulkInputError(str(e)) from e

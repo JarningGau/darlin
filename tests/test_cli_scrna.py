@@ -150,7 +150,33 @@ def test_scrna_run_invalid_sample_id_exits_cleanly(tmp_path: Path) -> None:
         "10",
     )
     assert r.returncode == 1
-    assert "sample_id" in r.stderr or "path separators" in r.stderr
+    assert "sample_id" in r.stderr
+
+
+@pytest.mark.parametrize("sample_id", [".", "..", " "])
+def test_scrna_run_rejects_unsafe_sample_id(tmp_path: Path, sample_id: str) -> None:
+    fq1 = Path("tests/data/sc10xv3/LL837-skull-CA_1.fastq.gz")
+    fq2 = Path("tests/data/sc10xv3/LL837-skull-CA_2.fastq.gz")
+    assert fq1.exists()
+    assert fq2.exists()
+
+    r = _run(
+        "scrna",
+        "run",
+        "--sample-id",
+        sample_id,
+        "--fq1",
+        str(fq1),
+        "--fq2",
+        str(fq2),
+        "--output-dir",
+        str(tmp_path / "out"),
+        "--sample-n",
+        "10",
+    )
+    assert r.returncode == 1
+    assert "Traceback" not in r.stderr
+    assert "sample_id" in r.stderr
 
 
 def test_scrna_run_unknown_protocol_exits_cleanly(tmp_path: Path) -> None:

@@ -46,8 +46,10 @@ class _StepTimer:
 def resolve_bulk_primers(*, locus: str) -> tuple[int, str, str]:
     # Lazy imports: do not break `--help` when optional deps missing.
     from Bio.Seq import Seq  # type: ignore
+    from darlin.bulk.validate import require_valid_locus
     from darlin_core.config.amplicon_configs import load_carlin_config_by_locus  # type: ignore
 
+    require_valid_locus(locus)
     config = load_carlin_config_by_locus(locus=locus)
     unedited_bc_len = len(config.carlin_sequence)
     p5_seq = config.sequence.primer5
@@ -59,8 +61,10 @@ def resolve_bulk_primers(*, locus: str) -> tuple[int, str, str]:
 
 def resolve_bulk_primers_paired(*, locus: str) -> tuple[int, str, str]:
     """Forward P3 and P5 strings from darlin_core config for PE85+350 R2 primer matching."""
+    from darlin.bulk.validate import require_valid_locus
     from darlin_core.config.amplicon_configs import load_carlin_config_by_locus  # type: ignore
 
+    require_valid_locus(locus)
     config = load_carlin_config_by_locus(locus=locus)
     unedited_bc_len = len(config.carlin_sequence)
     p5_seq = config.sequence.primer5
@@ -200,6 +204,8 @@ def run_bulk_pipeline(
 ) -> int:
     if protocol == "pe85-r350" and skip_pear:
         raise ValueError("protocol pe85-r350 cannot be combined with --skip-pear")
+    if protocol == "pe250" and not skip_pear and assembled_fq is not None:
+        raise ValueError("assembled_fq is only valid when skip_pear=True (protocol pe250)")
 
     paths = get_bulk_paths(output_dir=output_dir, sample_id=sample_id)
     paths.ensure_dirs()

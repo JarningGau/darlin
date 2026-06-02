@@ -4,7 +4,7 @@ import argparse
 import sys
 from pathlib import Path
 
-from darlin.bulk.validate import BulkInputError, require_pear_executable, require_readable_files
+from darlin.bulk.validate import BulkInputError, require_pear_executable, require_readable_files, require_valid_locus
 
 HELP_FORMATTER = argparse.ArgumentDefaultsHelpFormatter
 
@@ -233,6 +233,7 @@ def _bulk_run(args: argparse.Namespace) -> int:
         return 1
     protocol = str(args.protocol)
     try:
+        require_valid_locus(args.locus)
         if protocol == "pe85-r350":
             if args.skip_pear:
                 raise BulkInputError("--skip-pear cannot be used with --protocol pe85-r350")
@@ -261,6 +262,10 @@ def _bulk_run(args: argparse.Namespace) -> int:
                 [("Assembled FASTQ (--assembled-fq or default pear output)", assembled_fq)]
             )
         else:
+            if args.assembled_fq:
+                raise BulkInputError(
+                    "--assembled-fq is only valid with --skip-pear; omit it to run PEAR on --fq1/--fq2"
+                )
             missing_fqs = []
             if not args.fq1:
                 missing_fqs.append("--fq1")
@@ -282,29 +287,33 @@ def _bulk_run(args: argparse.Namespace) -> int:
         print(e, file=sys.stderr)
         return 1
 
-    return run_bulk_pipeline(
-        sample_id=args.sample_id,
-        fq1=args.fq1,
-        fq2=args.fq2,
-        assembled_fq=args.assembled_fq,
-        output_dir=args.output_dir,
-        locus=args.locus,
-        umi_len=args.umi_len,
-        pear_path=args.pear_path,
-        threads=args.threads,
-        min_bc_len=args.min_bc_len,
-        reads_cutoff_list=list(args.reads_cutoff),
-        denoise_iter=args.denoise_iter,
-        umi_ld_list=list(args.umi_ld),
-        lb_hd_relative_list=list(args.lb_hd_relative),
-        skip_pear=bool(args.skip_pear),
-        keep_pear=bool(args.keep_pear),
-        log_level=args.log_level,
-        test=bool(args.test),
-        sample_n=args.sample_n,
-        show_progress=not bool(args.no_progress),
-        protocol=protocol,
-    )
+    try:
+        return run_bulk_pipeline(
+            sample_id=args.sample_id,
+            fq1=args.fq1,
+            fq2=args.fq2,
+            assembled_fq=args.assembled_fq,
+            output_dir=args.output_dir,
+            locus=args.locus,
+            umi_len=args.umi_len,
+            pear_path=args.pear_path,
+            threads=args.threads,
+            min_bc_len=args.min_bc_len,
+            reads_cutoff_list=list(args.reads_cutoff),
+            denoise_iter=args.denoise_iter,
+            umi_ld_list=list(args.umi_ld),
+            lb_hd_relative_list=list(args.lb_hd_relative),
+            skip_pear=bool(args.skip_pear),
+            keep_pear=bool(args.keep_pear),
+            log_level=args.log_level,
+            test=bool(args.test),
+            sample_n=args.sample_n,
+            show_progress=not bool(args.no_progress),
+            protocol=protocol,
+        )
+    except BulkInputError as e:
+        print(e, file=sys.stderr)
+        return 1
 
 
 def _bulk_pear(args: argparse.Namespace) -> int:
@@ -347,6 +356,7 @@ def _bulk_extract(args: argparse.Namespace) -> int:
     paths.ensure_dirs()
     protocol = str(args.protocol)
     try:
+        require_valid_locus(args.locus)
         if protocol == "pe85-r350":
             if args.assembled_fq:
                 raise BulkInputError(
@@ -379,32 +389,36 @@ def _bulk_extract(args: argparse.Namespace) -> int:
     logger = setup_logging(paths.log_file, getattr(logging, args.log_level.upper(), logging.INFO))
     max_reads = args.sample_n if args.sample_n is not None else (2500 if args.test else None)
 
-    if protocol == "pe85-r350":
-        _unedited, p3_fwd, p5_fwd = resolve_bulk_primers_paired(locus=args.locus)
-        step_extract_paired(
-            fq1=args.fq1,
-            fq2=args.fq2,
-            umi_len=args.umi_len,
-            p3_seq=p3_fwd,
-            p5_seq=p5_fwd,
-            paths=paths,
-            max_reads=max_reads,
-            logger=logger,
-            show_progress=not bool(args.no_progress),
-        )
-    else:
-        assembled = Path(args.assembled_fq) if args.assembled_fq else paths.assembled_fastq
-        _unedited, p3_rc, p5_rc = resolve_bulk_primers(locus=args.locus)
-        step_extract(
-            assembled_fastq=assembled,
-            umi_len=args.umi_len,
-            p3_seq=p3_rc,
-            p5_seq=p5_rc,
-            paths=paths,
-            max_reads=max_reads,
-            logger=logger,
-            show_progress=not bool(args.no_progress),
-        )
+    try:
+        if protocol == "pe85-r350":
+            _unedited, p3_fwd, p5_fwd = resolve_bulk_primers_paired(locus=args.locus)
+            step_extract_paired(
+                fq1=args.fq1,
+                fq2=args.fq2,
+                umi_len=args.umi_len,
+                p3_seq=p3_fwd,
+                p5_seq=p5_fwd,
+                paths=paths,
+                max_reads=max_reads,
+                logger=logger,
+                show_progress=not bool(args.no_progress),
+            )
+        else:
+            assembled = Path(args.assembled_fq) if args.assembled_fq else paths.assembled_fastq
+            _unedited, p3_rc, p5_rc = resolve_bulk_primers(locus=args.locus)
+            step_extract(
+                assembled_fastq=assembled,
+                umi_len=args.umi_len,
+                p3_seq=p3_rc,
+                p5_seq=p5_rc,
+                paths=paths,
+                max_reads=max_reads,
+                logger=logger,
+                show_progress=not bool(args.no_progress),
+            )
+    except BulkInputError as e:
+        print(e, file=sys.stderr)
+        return 1
     return 0
 
 
@@ -422,6 +436,7 @@ def _bulk_filter(args: argparse.Namespace) -> int:
     paths.ensure_dirs()
     extracted = Path(args.extracted) if args.extracted else paths.extracted_tsv
     try:
+        require_valid_locus(args.locus)
         require_readable_files([("Extracted TSV (--extracted or default)", extracted)])
     except BulkInputError as e:
         print(e, file=sys.stderr)
@@ -434,7 +449,11 @@ def _bulk_filter(args: argparse.Namespace) -> int:
         paths=paths,
         logger=logger,
     )
-    unedited_bc_len, _, _ = resolve_bulk_primers(locus=args.locus)
+    try:
+        unedited_bc_len, _, _ = resolve_bulk_primers(locus=args.locus)
+    except BulkInputError as e:
+        print(e, file=sys.stderr)
+        return 1
     diag = paths.sample_dir / "diagnostics"
     write_pre_denoise_plots(
         filtered_tsv=paths.filtered_tsv,
@@ -460,6 +479,7 @@ def _bulk_denoise(args: argparse.Namespace) -> int:
     paths.ensure_dirs()
     filtered = Path(args.filtered) if args.filtered else paths.filtered_tsv
     try:
+        require_valid_locus(args.locus)
         require_readable_files([("Filtered TSV (--filtered or default)", filtered)])
     except BulkInputError as e:
         print(e, file=sys.stderr)
@@ -473,7 +493,11 @@ def _bulk_denoise(args: argparse.Namespace) -> int:
     combo.ensure_dir()
 
     logger = setup_logging(paths.log_file, getattr(logging, args.log_level.upper(), logging.INFO))
-    unedited_bc_len, _, _ = resolve_bulk_primers(locus=args.locus)
+    try:
+        unedited_bc_len, _, _ = resolve_bulk_primers(locus=args.locus)
+    except BulkInputError as e:
+        print(e, file=sys.stderr)
+        return 1
     write_pre_denoise_plots(
         filtered_tsv=filtered,
         out_dir=combo.dir,
@@ -513,6 +537,7 @@ def _bulk_annotate(args: argparse.Namespace) -> int:
         return 1
     paths.ensure_dirs()
     try:
+        require_valid_locus(args.locus)
         require_readable_files([("Denoised barcodes (--denoised-barcodes)", args.denoised_barcodes)])
     except BulkInputError as e:
         print(e, file=sys.stderr)
@@ -526,7 +551,11 @@ def _bulk_annotate(args: argparse.Namespace) -> int:
     combo.ensure_dir()
 
     logger = setup_logging(paths.log_file, getattr(logging, args.log_level.upper(), logging.INFO))
-    unedited_bc_len, _, _ = resolve_bulk_primers(locus=args.locus)
+    try:
+        unedited_bc_len, _, _ = resolve_bulk_primers(locus=args.locus)
+    except BulkInputError as e:
+        print(e, file=sys.stderr)
+        return 1
     filtered = paths.filtered_tsv
     if filtered.exists():
         write_pre_denoise_plots(

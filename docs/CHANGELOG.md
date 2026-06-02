@@ -9,6 +9,8 @@
 ### Changed
 
 - Bulk: scope `--help` flags per step (`pear`, `extract`, `filter`, `denoise`, `annotate`) so unused common options from `bulk run` are not advertised; mistyped flags are rejected at parse time.
+- Bulk/scRNA: tighten `--sample-id` to safe single-segment identifiers (letters, digits, `.`, `_`, `-`; rejects `.`, `..`, and whitespace-only values).
+- Bulk: invalid `--locus` and misused `--assembled-fq` (without `--skip-pear` on `pe250`) fail with clean CLI errors instead of tracebacks.
 
 ### Removed
 

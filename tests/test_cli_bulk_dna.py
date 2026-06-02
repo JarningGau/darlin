@@ -330,7 +330,56 @@ def test_cli_bulk_run_invalid_sample_id_exits_cleanly(tmp_path: Path) -> None:
     )
     assert r.returncode == 1, f"stdout:\n{r.stdout}\n\nstderr:\n{r.stderr}"
     assert "Traceback" not in r.stderr
-    assert "sample_id" in r.stderr or "path separators" in r.stderr
+    assert "sample_id" in r.stderr
+
+
+@pytest.mark.parametrize("sample_id", [".", "..", " "])
+def test_cli_bulk_run_rejects_unsafe_sample_id(tmp_path: Path, sample_id: str) -> None:
+    r = _run(
+        "bulk",
+        "run",
+        "--sample-id",
+        sample_id,
+        "--skip-pear",
+        "--output-dir",
+        str(tmp_path / "out"),
+    )
+    assert r.returncode == 1, f"stdout:\n{r.stdout}\n\nstderr:\n{r.stderr}"
+    assert "Traceback" not in r.stderr
+    assert "sample_id" in r.stderr
+
+
+def test_cli_bulk_filter_invalid_locus_exits_cleanly(tmp_path: Path) -> None:
+    r = _run(
+        "bulk",
+        "filter",
+        "--sample-id",
+        "L141_CA",
+        "--locus",
+        "NOT_A_LOCUS",
+        "--output-dir",
+        str(tmp_path / "out"),
+    )
+    assert r.returncode == 1, f"stdout:\n{r.stdout}\n\nstderr:\n{r.stderr}"
+    assert "Traceback" not in r.stderr
+    assert "Unsupported locus" in r.stderr or "Supported loci" in r.stderr
+
+
+def test_cli_bulk_run_pe250_rejects_assembled_fq_without_skip_pear(tmp_path: Path) -> None:
+    r = _run(
+        "bulk",
+        "run",
+        "--sample-id",
+        "L141_CA",
+        "--assembled-fq",
+        str(tmp_path / "assembled.fq"),
+        "--output-dir",
+        str(tmp_path / "out"),
+    )
+    assert r.returncode == 1, f"stdout:\n{r.stdout}\n\nstderr:\n{r.stderr}"
+    assert "Traceback" not in r.stderr
+    assert "--assembled-fq" in r.stderr
+    assert "--skip-pear" in r.stderr
 
 
 def test_cli_bulk_pear_missing_fq2_exits_cleanly(tmp_path: Path) -> None:
