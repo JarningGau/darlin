@@ -11,8 +11,8 @@
 ## [0.4.1] - 2026-06-02
 
 **0.4.1** is the repository tree at commit
-[`37ef6d9`](https://github.com/JarningGau/darlin/commit/37ef6d93dab2cbfdf0859c31d525f486319ae068)
-(`37ef6d93dab2cbfdf0859c31d525f486319ae068`).
+[`37ef6d9`](https://github.com/JarningGau/darlin/commit/43a4ea2558f8064d72e39d0f6b90fce6fd68f60f)
+(`43a4ea2558f8064d72e39d0f6b90fce6fd68f60f`).
 
 ### Added
 
