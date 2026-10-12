@@ -8,6 +8,7 @@ from darlin.scrna.logging import setup_logging
 from darlin.scrna.paths import get_scrna_paths
 from darlin.scrna.protocols import ScrnaProtocol
 from darlin.scrna.steps import step_annotate, step_denoise, step_extract, step_qc
+from darlin.scrna.validate import ScrnaInputError
 
 
 def resolve_scrna_primers(*, locus: str) -> tuple[int, str, str]:
@@ -49,6 +50,8 @@ def run_scrna_pipeline(
     k_cutoff: float,
     reads_cutoff_per_cell: int,
     reads_cutoff_per_molecule: int,
+    pear_path: str = "pear",
+    threads: int = 8,
 ) -> int:
     paths = get_scrna_paths(output_dir=output_dir, sample_id=sample_id)
     paths.ensure_dirs()
@@ -69,7 +72,7 @@ def run_scrna_pipeline(
     unedited_bc_len, p3_seq, p5_seq = resolve_scrna_primers(locus=locus)
     max_reads = resolve_max_reads(test=test, sample_n=sample_n)
 
-    step_extract(
+    extracted = step_extract(
         fq1=Path(fq1),
         fq2=Path(fq2),
         protocol=protocol,
@@ -80,7 +83,11 @@ def run_scrna_pipeline(
         logger=logger,
         max_reads=max_reads,
         show_progress=show_progress,
+        pear_path=pear_path,
+        threads=threads,
     )
+    if protocol.assemble_pairs and extracted.empty:
+        raise ScrnaInputError(f"No lineage barcodes extracted from assembled reads; see {paths.log_file}.")
     step_denoise(
         extracted_tsv=paths.extracted_tsv,
         whitelist_path=whitelist_path,

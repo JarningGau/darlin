@@ -40,7 +40,7 @@ def _add_common_scrna_args(
     p.add_argument("--sample-id", type=str, required=True, help="Sample ID for output directory naming")
     p.add_argument("--output-dir", type=str, default="./output", help="Base output directory")
     p.add_argument("--locus", type=str, default="Col1a1", help="Locus name (darlin-core config key)")
-    p.add_argument("--protocol", type=str, default="10xv3", help="Single-cell protocol preset")
+    p.add_argument("--protocol", type=str, default="10xv3", help="Single-cell protocol preset: 10xv3, camellia, camellia-pe250")
     p.add_argument("--whitelist", type=str, default=None, help="Override protocol default whitelist path")
     p.add_argument(
         "--log-level",
@@ -54,6 +54,8 @@ def _add_common_scrna_args(
     p.add_argument("--sample-n", type=positive_int, default=None, help="Process first N read pairs")
     p.add_argument("--min-bc-len", type=positive_int, default=20, help="Minimum lineage barcode length")
     if include_fqs:
+        p.add_argument("--pear-path", type=str, default="pear", help="PEAR executable for camellia-pe250")
+        p.add_argument("--threads", type=positive_int, default=8, help="PEAR assembly threads for camellia-pe250")
         p.add_argument(
             "--fq1",
             type=str,
@@ -192,6 +194,13 @@ def _validate_scrna_common(args: argparse.Namespace):
     try:
         protocol = require_protocol(args.protocol)
         whitelist_path = resolve_whitelist_path(protocol, args.whitelist)
+        if protocol.assemble_pairs and hasattr(args, "pear_path"):
+            from darlin.bulk.validate import BulkInputError, require_pear_executable
+
+            try:
+                require_pear_executable(args.pear_path)
+            except BulkInputError as exc:
+                raise ScrnaInputError(str(exc)) from exc
     except ScrnaInputError as exc:
         print(exc, file=sys.stderr)
         return None
@@ -217,6 +226,14 @@ def _validate_scrna_fqs(args: argparse.Namespace) -> bool:
 
 
 def _scrna_run(args: argparse.Namespace) -> int:
+    try:
+        return _run_scrna(args)
+    except ScrnaInputError as exc:
+        print(exc, file=sys.stderr)
+        return 1
+
+
+def _run_scrna(args: argparse.Namespace) -> int:
     if not _validate_scrna_fqs(args):
         return 1
     resolved = _validate_scrna_common(args)
@@ -246,10 +263,20 @@ def _scrna_run(args: argparse.Namespace) -> int:
         k_cutoff=args.k_cutoff,
         reads_cutoff_per_cell=args.reads_cutoff_per_cell,
         reads_cutoff_per_molecule=args.reads_cutoff_per_molecule,
+        pear_path=args.pear_path,
+        threads=args.threads,
     )
 
 
 def _scrna_extract(args: argparse.Namespace) -> int:
+    try:
+        return _extract_scrna(args)
+    except ScrnaInputError as exc:
+        print(exc, file=sys.stderr)
+        return 1
+
+
+def _extract_scrna(args: argparse.Namespace) -> int:
     if not _validate_scrna_fqs(args):
         return 1
     resolved = _validate_scrna_common(args)
@@ -277,6 +304,8 @@ def _scrna_extract(args: argparse.Namespace) -> int:
         logger=logger,
         max_reads=resolve_max_reads(test=bool(args.test), sample_n=args.sample_n),
         show_progress=not bool(args.no_progress),
+        pear_path=args.pear_path,
+        threads=args.threads,
     )
     return 0
 

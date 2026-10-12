@@ -7,6 +7,84 @@ import pandas as pd
 import pytest
 
 
+def test_cli_scrna_camellia_pe250_run_produces_outputs(tmp_path: Path) -> None:
+    fixture = Path("tests/data/scCamellia-pe250")
+    r = _run(
+        "scrna", "run", "--sample-id", "96c", "--fq1", str(fixture / "96c_R1.fq.gz"),
+        "--fq2", str(fixture / "96c_R2.fq.gz"), "--protocol", "camellia-pe250",
+        "--output-dir", str(tmp_path), "--sample-n", "10000", "--threads", "2", "--no-progress",
+    )
+    assert r.returncode == 0, f"stdout:\n{r.stdout}\n\nstderr:\n{r.stderr}"
+    sample_dir = tmp_path / "96c"
+    extracted = pd.read_csv(sample_dir / "step1_extracted.tsv", sep="\t")
+    assert not extracted.empty
+    assert extracted.columns.tolist() == ["LB", "CB", "UB", "LB_len"]
+    assert extracted["CB"].str.len().eq(8).all()
+    assert extracted["UB"].str.len().eq(8).all()
+    assert (sample_dir / "pear/pear.assembled.fastq").is_file()
+    assert "Input read pairs: 10000" in (sample_dir / "run.log").read_text()
+    for filename in ["step2_denoised.tsv", "step3_qc.tsv", "step4_annotated.tsv", "step4_final.tsv"]:
+        assert not pd.read_csv(sample_dir / filename, sep="\t").empty
+
+
+@pytest.mark.parametrize("step", ["run", "extract"])
+def test_camellia_pe250_missing_pear_exits_cleanly(tmp_path: Path, step: str) -> None:
+    fixture = Path("tests/data/scCamellia-pe250")
+    r = _run(
+        "scrna", step, "--sample-id", "96c", "--fq1", str(fixture / "96c_R1.fq.gz"),
+        "--fq2", str(fixture / "96c_R2.fq.gz"), "--protocol", "camellia-pe250",
+        "--pear-path", str(tmp_path / "missing-pear"), "--output-dir", str(tmp_path / "out"),
+    )
+    assert r.returncode == 1
+    assert "PEAR executable not found" in r.stderr
+    assert "Traceback" not in r.stderr
+    assert not (tmp_path / "out").exists()
+
+
+@pytest.mark.parametrize("step", ["run", "extract"])
+def test_camellia_pe250_failed_pear_exits_cleanly(tmp_path: Path, step: str) -> None:
+    fixture = Path("tests/data/scCamellia-pe250")
+    pear = tmp_path / "failed-pear"
+    pear.write_text("#!/bin/sh\necho assembly-failed\nexit 3\n")
+    pear.chmod(0o755)
+    r = _run(
+        "scrna", step, "--sample-id", "96c", "--fq1", str(fixture / "96c_R1.fq.gz"),
+        "--fq2", str(fixture / "96c_R2.fq.gz"), "--protocol", "camellia-pe250",
+        "--pear-path", str(pear), "--output-dir", str(tmp_path / "out"), "--sample-n", "2",
+    )
+    assert r.returncode == 1
+    assert "PEAR assembly failed" in r.stderr
+    assert "Traceback" not in r.stderr
+    assert "assembly-failed" in (tmp_path / "out/96c/pear/pear.log").read_text()
+
+
+@pytest.mark.parametrize("sample_args,expected", [([], 2500), (["--sample-n", "7"], 7)])
+def test_camellia_pe250_extract_test_limits_input(tmp_path: Path, sample_args, expected) -> None:
+    fixture = Path("tests/data/scCamellia-pe250")
+    r = _run(
+        "scrna", "extract", "--sample-id", "96c", "--fq1", str(fixture / "96c_R1.fq.gz"),
+        "--fq2", str(fixture / "96c_R2.fq.gz"), "--protocol", "camellia-pe250",
+        "--output-dir", str(tmp_path), "--test", "--threads", "1", "--no-progress", *sample_args,
+    )
+    assert r.returncode == 0, r.stderr
+    assert f"Input read pairs: {expected}" in (tmp_path / "96c/run.log").read_text()
+
+
+@pytest.mark.parametrize("mismatched", [True, False])
+def test_camellia_pe250_invalid_or_unassembled_pairs_exit_cleanly(tmp_path: Path, mismatched: bool) -> None:
+    fq1, fq2 = tmp_path / "r1.fq", tmp_path / "r2.fq"
+    fq1.write_text(f"@a/1\n{'A' * 150}\n+\n{'I' * 150}\n")
+    fq2.write_text(f"@{'b' if mismatched else 'a'}/2\n{'C' * 150}\n+\n{'I' * 150}\n")
+    r = _run(
+        "scrna", "run", "--sample-id", "empty", "--fq1", str(fq1), "--fq2", str(fq2),
+        "--protocol", "camellia-pe250", "--output-dir", str(tmp_path / "out"), "--no-progress",
+    )
+    assert r.returncode == 1
+    assert "Traceback" not in r.stderr
+    assert ("ID mismatch" if mismatched else "No lineage barcodes extracted") in r.stderr
+    assert not (tmp_path / "out/empty/step4_final.tsv").exists()
+
+
 def _run(*args: str) -> subprocess.CompletedProcess[str]:
     env = os.environ.copy()
     env["PYTHONPATH"] = os.pathsep.join([os.path.abspath("src"), env.get("PYTHONPATH", "")]).strip(os.pathsep)

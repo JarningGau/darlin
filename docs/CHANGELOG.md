@@ -4,6 +4,9 @@
 
 ### Added
 
+- scRNA: add `camellia-pe250` for PEAR-first Camellia paired-end processing in `run` and `extract`, with `--pear-path` and `--threads`. Preserve CB/UMI from original R2 by read ID, sample input pairs before assembly, and retain PEAR products and assembly counts.
+- Tests: add a 10,000-pair Camellia assembly fixture and end-to-end coverage, including read association, input validation, and assembly failures.
+
 ### Changed
 
 ### Removed

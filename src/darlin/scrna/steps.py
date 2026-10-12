@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import logging
+from contextlib import ExitStack
+from itertools import islice
 from pathlib import Path
 
 import pandas as pd  # type: ignore
@@ -32,6 +34,8 @@ def step_extract(
     logger: logging.Logger,
     max_reads: int | None,
     show_progress: bool,
+    pear_path: str = "pear",
+    threads: int = 8,
 ) -> pd.DataFrame:
     p3_mm = get_mm_dist(p3_seq)
     p5_mm = get_mm_dist(p5_seq)
@@ -42,8 +46,25 @@ def step_extract(
     skipped_barcode_n = 0
     skipped_no_dual_match = 0
 
-    with open_text_maybe_gzip(fq1) as handle1, open_text_maybe_gzip(fq2) as handle2:
-        iterator = iter_fastq_paired(handle1, handle2)
+    with ExitStack() as stack:
+        if protocol.assemble_pairs:
+            from darlin.scrna.assembly import iter_assembled_camellia_reads
+
+            iterator = iter_assembled_camellia_reads(
+                fq1=fq1, fq2=fq2, pear_dir=paths.sample_dir / "pear",
+                barcode_len=protocol.cb_len + protocol.umi_len, max_reads=max_reads,
+                pear_path=pear_path, threads=threads, logger=logger,
+            )
+        else:
+            handle1 = stack.enter_context(open_text_maybe_gzip(fq1))
+            handle2 = stack.enter_context(open_text_maybe_gzip(fq2))
+
+            def paired_sequences():
+                for _id1, seq1, _qual1, _id2, seq2, _qual2 in islice(iter_fastq_paired(handle1, handle2), max_reads):
+                    reads = {"fq1": seq1, "fq2": seq2}
+                    yield reads[protocol.darlin_read], reads[protocol.barcode_read]
+
+            iterator = paired_sequences()
         iterator = tqdm(
             iterator,
             desc="Processing reads",
@@ -51,14 +72,8 @@ def step_extract(
             unit_scale=True,
             disable=not show_progress,
         )
-        for _id1, seq1, _qual1, _id2, seq2, _qual2 in iterator:
+        for darlin_seq, barcode_seq in iterator:
             total_reads += 1
-            if max_reads is not None and total_reads > max_reads:
-                break
-
-            reads = {"fq1": seq1, "fq2": seq2}
-            barcode_seq = reads[protocol.barcode_read]
-            darlin_seq = reads[protocol.darlin_read]
 
             cb = barcode_seq[: protocol.cb_len]
             ub = barcode_seq[protocol.cb_len : protocol.cb_len + protocol.umi_len]
@@ -79,7 +94,7 @@ def step_extract(
     df = pd.DataFrame(rows, columns=["LB", "CB", "UB", "LB_len"])
     df.to_csv(paths.extracted_tsv, sep="\t", index=False)
     write_extract_plots(df, paths.diagnostics_dir, unedited_bc_len=unedited_bc_len)
-    reads_scanned = total_reads if max_reads is None else min(total_reads, max_reads)
+    reads_scanned = total_reads
     log_step_title(logger, "Extract")
     log_count(logger, "Total reads", reads_scanned)
     log_count_with_pct(logger, "Matched reads", matched_reads, reads_scanned)

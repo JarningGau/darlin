@@ -12,6 +12,7 @@ class ScrnaProtocol:
     default_whitelist_path: Path
     barcode_read: str
     darlin_read: str
+    assemble_pairs: bool = False
 
 
 _PROTOCOLS: dict[str, ScrnaProtocol] = {
@@ -30,6 +31,15 @@ _PROTOCOLS: dict[str, ScrnaProtocol] = {
         default_whitelist_path=Path("reference/whitelist/scCamellia.txt.gz"),
         barcode_read="fq2",
         darlin_read="fq1",
+    ),
+    "camellia-pe250": ScrnaProtocol(
+        name="camellia-pe250",
+        cb_len=8,
+        umi_len=8,
+        default_whitelist_path=Path("reference/whitelist/scCamellia.txt.gz"),
+        barcode_read="fq2",
+        darlin_read="fq1",
+        assemble_pairs=True,
     ),
 }
 
