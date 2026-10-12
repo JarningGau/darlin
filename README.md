@@ -26,6 +26,9 @@ Primary subcommands:
 | `bulk` | Lineage recovery from bulk DNA/RNA data | `pear -> extract -> filter -> denoise -> annotate` |
 | `scrna` | Lineage recovery from single-cell RNA-seq data | `extract -> denoise -> qc -> annotate` |
 
+For `scrna run` and `scrna extract` with `--protocol camellia-pe250`, PEAR
+assembly runs before extraction.
+
 ## Quick Start
 
 ### Bulk DNA/RNA
@@ -71,7 +74,7 @@ Results are written under `<output-dir>/<sample-id>/`. See [docs/bulk.md](docs/b
 
 ### Single-Cell RNA-seq
 
-Supported protocols: `10xv3`, `camellia`.
+Supported protocols: `10xv3`, `camellia`, `camellia-pe250`.
 
 ```bash
 # 10x Chromium v3
@@ -91,6 +94,18 @@ darlin scrna run \
   --protocol camellia \
   --output-dir ./output \
   --sample-n 200
+
+# Camellia PE250 (PEAR assembly before extraction)
+darlin scrna run \
+  --sample-id 96c \
+  --fq1 tests/data/scCamellia-pe250/96c_R1.fq.gz \
+  --fq2 tests/data/scCamellia-pe250/96c_R2.fq.gz \
+  --protocol camellia-pe250 \
+  --locus Col1a1 \
+  --output-dir ./output \
+  --sample-n 200 \
+  --threads 8 \
+  --reads-cutoff-per-molecule 1
 ```
 
 Results are written under `<output-dir>/<sample-id>/`. See [docs/scrna.md](docs/scrna.md) for the full argument reference, output layout, and step-wise execution. See [docs/CHANGELOG.md](docs/CHANGELOG.md) for a running summary of notable changes.
@@ -114,6 +129,7 @@ darlin/
 │   │   ├── plots.py
 │   │   └── ...
 │   └── scrna/               # scRNA pipeline
+│       ├── assembly.py      # PEAR assembly and original R2 association
 │       ├── pipeline.py
 │       ├── steps.py
 │       ├── protocols.py
@@ -142,7 +158,7 @@ darlin/
 
 | Package | Channel | Purpose |
 |---------|---------|---------|
-| `pear` | bioconda | Paired-end read assembler (bulk pipeline) |
+| `pear` | bioconda | Paired-end read assembler (bulk and Camellia PE250 pipelines) |
 | `umi_tools` | bioconda | UMI deduplication utilities |
 | [darlin-core](https://github.com/JarningGau/darlin-core) | PyPI (git) | DARLIN amplicon annotation engine |
 | `biopython` | conda-forge | Sequence I/O |
